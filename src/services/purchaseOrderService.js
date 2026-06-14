@@ -102,7 +102,9 @@ const mapPO = (po, creator = null) => {
       address: po.vendor.address
     } : null,
     branchDetails: { name: po.branch_name, code: po.branch_code },
-    creatorDetails: creator || { name: creatorName }
+    creatorDetails: creator || { name: creatorName },
+    tanggalPengiriman: po.tanggal_pengiriman || po.tanggal_delivery || po.delivery_date || '',
+    catatan: po.catatan || po.notes || po.note || '-'
   };
 };
 
@@ -235,9 +237,9 @@ export const purchaseOrderService = {
     return purchaseOrderService.getById(id);
   },
 
-  receive: async (id, userId) => {
+  receive: async (id, userId, tanggalPengiriman) => {
     const res = await apiClient.patch(`/api/purchasing/purchase-orders/${id}/receive`, {
-      tanggal_pengiriman: new Date().toISOString().split('T')[0]
+      tanggal_pengiriman: tanggalPengiriman || new Date().toISOString().split('T')[0]
     });
     return purchaseOrderService.getById(id);
   },

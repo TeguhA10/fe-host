@@ -24,7 +24,8 @@ export default function PurchaseOrderForm() {
   // PO Header Form State
   const [branchId, setBranchId] = useState('');
   const [vendorId, setVendorId] = useState('');
-  
+  const [catatan, setCatatan] = useState('');
+
   // Dynamic line items State
   const [poLines, setPoLines] = useState([{ itemId: '', qty: 1, price: 0, subtotal: 0 }]);
 
@@ -33,7 +34,7 @@ export default function PurchaseOrderForm() {
       try {
         setLoading(true);
         setError('');
-        
+
         const bData = await branchService.getAll();
         const vData = await vendorService.getAll();
         const iData = await itemService.getAll();
@@ -54,7 +55,8 @@ export default function PurchaseOrderForm() {
           }
           setBranchId(po.branchId.toString());
           setVendorId(po.vendorId.toString());
-          
+          setCatatan(po.catatan || '');
+
           const lines = po.items.map(poi => ({
             itemId: poi.itemId.toString(),
             qty: poi.qty,
@@ -87,7 +89,7 @@ export default function PurchaseOrderForm() {
   const handleLineChange = (index, field, value) => {
     setError('');
     const updatedLines = [...poLines];
-    
+
     if (field === 'itemId') {
       updatedLines[index].itemId = value;
       // Pre-fill last price from item catalog
@@ -122,7 +124,7 @@ export default function PurchaseOrderForm() {
 
     if (!branchId) return setError('Pilih Cabang Peminta terlebih dahulu.');
     if (!vendorId) return setError('Pilih Vendor Supplier terlebih dahulu.');
-    
+
     // Check lines validation
     for (let i = 0; i < poLines.length; i++) {
       const line = poLines[i];
@@ -136,6 +138,7 @@ export default function PurchaseOrderForm() {
       const payload = {
         branchId,
         vendorId,
+        catatan,
         items: poLines
       };
 
@@ -189,7 +192,7 @@ export default function PurchaseOrderForm() {
       {/* Form Card */}
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-6">
-          
+
           {/* Header Metadata fields */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 border-b border-slate-100 pb-6">
             {/* Branch Selection */}
@@ -226,6 +229,18 @@ export default function PurchaseOrderForm() {
                 ))}
               </select>
             </div>
+
+            {/* PO Notes */}
+            <div className="col-span-1 md:col-span-2">
+              <label className="block text-xs font-semibold text-slate-600 mb-2">Catatan / Keterangan PO (Opsional)</label>
+              <textarea
+                value={catatan}
+                onChange={(e) => setCatatan(e.target.value)}
+                placeholder="Keterangan tambahan mengenai PO, instruksi pengiriman, dll..."
+                rows={3}
+                className="block w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-800 focus:border-indigo-500 focus:ring-indigo-500 bg-white placeholder-slate-400"
+              />
+            </div>
           </div>
 
           {/* Dynamic Order items list */}
@@ -251,7 +266,7 @@ export default function PurchaseOrderForm() {
               <div className="space-y-3">
                 {poLines.map((line, index) => (
                   <div key={index} className="flex flex-col md:flex-row md:items-end gap-3 p-3 bg-slate-50/50 rounded-xl border border-slate-150">
-                    
+
                     {/* Item dropdown selection */}
                     <div className="flex-1 min-w-0">
                       <label className="block text-[10px] font-semibold text-slate-500 mb-1.5 md:hidden">Pilih Barang</label>
@@ -336,7 +351,7 @@ export default function PurchaseOrderForm() {
           <button
             type="submit"
             disabled={submitting}
-            className="inline-flex items-center justify-center space-x-2 rounded-xl bg-indigo-650 px-5 py-3 text-xs font-semibold text-white shadow-lg shadow-indigo-600/15 hover:bg-indigo-500 disabled:opacity-50 transition-all duration-150"
+            className="inline-flex items-center justify-center space-x-2 rounded-xl bg-indigo-500 px-5 py-3 text-xs font-semibold text-white shadow-lg shadow-indigo-600/15 hover:bg-indigo-500 disabled:opacity-50 transition-all duration-150"
           >
             {submitting ? (
               <>

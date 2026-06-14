@@ -24,7 +24,7 @@ export default function MainDashboard() {
       try {
         setLoading(true);
         const [empRes, branchList, vendorRes, poRes] = await Promise.all([
-          employeeService.getAll({ limit: 1, status: 'Active' }),
+          employeeService.getAll({ limit: 1, status: 'aktif' }),
           branchService.getAll(),
           vendorService.getAll({ limit: 1, status: 'active' }),
           purchaseOrderService.getAll({ limit: 1000 })
@@ -33,7 +33,7 @@ export default function MainDashboard() {
         const activeEmps = empRes.meta?.total || 0;
         const totalBranches = branchList.length;
         const activeVendors = vendorRes.meta?.total || 0;
-        
+
         const poList = poRes.data || poRes || [];
         const pending = poList.filter(po => po.status === 'Submitted').length;
         const totalVal = poList
@@ -121,51 +121,6 @@ export default function MainDashboard() {
             </p>
           </div>
         </div>
-      </div>
-
-      {/* Modules Redirection Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
-        {/* HRIS module quick entry card */}
-        <div className="bg-white rounded-3xl border border-slate-200/80 p-8 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
-          <div>
-            <div className="inline-flex p-4 bg-indigo-50 text-indigo-600 rounded-2xl mb-6">
-              <Users size={32} />
-            </div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2">Human Resource Information System (HRIS)</h3>
-            <p className="text-slate-500 text-sm leading-relaxed mb-6">
-              Kelola seluruh data kepegawaian perusahaan secara terpusat. Dilengkapi dengan bagan organisasi untuk cabang dan jabatan, kontrak karyawan aktif, monitoring masa berlaku kontrak, dan manajemen otorisasi pengguna.
-            </p>
-          </div>
-          <Link
-            to="/hris"
-            className="inline-flex items-center justify-center space-x-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/10 hover:bg-indigo-500 transition-all duration-150 self-start"
-          >
-            <span>Buka Dashboard HRIS</span>
-            <ArrowRight size={16} />
-          </Link>
-        </div>
-
-        {/* Purchasing module quick entry card */}
-        <div className="bg-white rounded-3xl border border-slate-200/80 p-8 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
-          <div>
-            <div className="inline-flex p-4 bg-amber-50 text-amber-600 rounded-2xl mb-6">
-              <ShoppingBag size={32} />
-            </div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2">Purchasing & Procurement</h3>
-            <p className="text-slate-500 text-sm leading-relaxed mb-6">
-              Kelola alur pengadaan barang dan inventaris perusahaan. Dilengkapi dengan pengelolaan data vendor, katalog barang lengkap dengan pencatatan harga beli terakhir, form pengajuan Purchase Order dinamis, serta workflow approval yang terintegrasi dengan peran pengguna.
-            </p>
-          </div>
-          <Link
-            to="/purchasing"
-            className="inline-flex items-center justify-center space-x-2 rounded-xl bg-amber-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-amber-600/10 hover:bg-amber-500 transition-all duration-150 self-start"
-          >
-            <span>Buka Dashboard Purchasing</span>
-            <ArrowRight size={16} />
-          </Link>
-        </div>
-
       </div>
     </div>
   );

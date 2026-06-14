@@ -81,44 +81,99 @@ export default function DashboardLayout() {
 
   const menuItems = [
     {
-      title: 'Dashboard',
+      title: "Dashboard",
       icon: LayoutDashboard,
-      path: '/dashboard',
-      type: 'link'
+      path: "/dashboard",
+      type: "link",
     },
+
     {
-      title: 'HRIS',
+      title: "HRIS",
       icon: Users,
-      type: 'submenu',
+      type: "submenu",
       state: hrisOpen,
       setState: setHrisOpen,
-      prefix: '/hris',
+      prefix: "/hris",
+      roleRequired: ["superadmin", "admin_hrd"],
       children: [
-        { title: 'Dashboard', path: '/hris', icon: LayoutDashboard },
-        { title: 'Karyawan', path: '/hris/employees', icon: Users },
-        { title: 'Cabang / Branches', path: '/hris/branches', icon: GitMerge },
-        { title: 'Jabatan / Positions', path: '/hris/positions', icon: Briefcase },
-        { title: 'User Accounts', path: '/hris/users', icon: UserSquare2, roleRequired: 'superadmin' }
-      ]
+        {
+          title: "Dashboard",
+          path: "/hris",
+          icon: LayoutDashboard,
+        },
+        {
+          title: "Karyawan",
+          path: "/hris/employees",
+          icon: Users,
+        },
+        {
+          title: "Cabang / Branches",
+          path: "/hris/branches",
+          icon: GitMerge,
+        },
+        {
+          title: "Jabatan / Positions",
+          path: "/hris/positions",
+          icon: Briefcase,
+        },
+        {
+          title: "User Accounts",
+          path: "/hris/users",
+          icon: UserSquare2,
+          roleRequired: ["superadmin"],
+        },
+      ],
     },
+
     {
-      title: 'Purchasing',
+      title: "Purchasing",
       icon: ShoppingBag,
-      type: 'submenu',
+      type: "submenu",
       state: purchasingOpen,
       setState: setPurchasingOpen,
-      prefix: '/purchasing',
+      prefix: "/purchasing",
       children: [
-        { title: 'Dashboard', path: '/purchasing', icon: LayoutDashboard },
-        { title: 'Vendors', path: '/purchasing/vendors', icon: Store },
-        { title: 'Catalog Items', path: '/purchasing/items', icon: Package },
-        { title: 'Purchase Orders', path: '/purchasing/purchase-orders', icon: FileCheck }
-      ]
-    }
+        {
+          title: "Dashboard",
+          path: "/purchasing",
+          icon: LayoutDashboard,
+          roleRequired: ["superadmin", "admin_purchasing"],
+        },
+        {
+          title: "Vendors",
+          path: "/purchasing/vendors",
+          icon: Store,
+          roleRequired: ["superadmin", "admin_purchasing"],
+        },
+        {
+          title: "Catalog Items",
+          path: "/purchasing/items",
+          icon: Package,
+          roleRequired: ["superadmin", "admin_purchasing"],
+        },
+        {
+          title: "Purchase Orders",
+          path: "/purchasing/purchase-orders",
+          icon: FileCheck,
+        },
+      ],
+    },
   ];
 
+  // Helper untuk cek role
+  const hasAccess = (roleRequired) => {
+    if (!roleRequired) return true;
+
+    const roles = Array.isArray(roleRequired)
+      ? roleRequired
+      : [roleRequired];
+
+    return roles.includes(user?.roleId);
+  };
+
+  // Filter child menu
   const filteredChildren = (submenu) => {
-    return submenu.children.filter(item => !item.roleRequired || item.roleRequired === user?.roleId);
+    return submenu.children.filter((item) => hasAccess(item.roleRequired));
   };
 
   const SidebarContent = () => (
@@ -129,11 +184,17 @@ export default function DashboardLayout() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-500 font-bold text-white shadow-lg shadow-indigo-500/25">
             ARG
           </div>
+
           <div className="flex flex-col">
-            <span className="font-semibold text-white tracking-wide text-sm">ERP ENTERPRISE</span>
-            <span className="text-[10px] text-slate-500 font-medium">Anyar Retail Group</span>
+            <span className="font-semibold text-white tracking-wide text-sm">
+              ERP ENTERPRISE
+            </span>
+            <span className="text-[10px] text-slate-500 font-medium">
+              Anyar Retail Group
+            </span>
           </div>
         </Link>
+
         <button
           onClick={() => setSidebarOpen(false)}
           className="hidden lg:block text-slate-400 hover:text-white rounded p-1 hover:bg-slate-800"
@@ -142,76 +203,93 @@ export default function DashboardLayout() {
         </button>
       </div>
 
-      {/* Navigation Menu */}
+      {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-2">
-        {menuItems.map((menu, idx) => {
-          if (menu.type === 'link') {
-            return (
-              <Link
-                key={idx}
-                to={menu.path}
-                className={`flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-150 ${isActive(menu.path)
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/15'
-                    : 'hover:bg-slate-800 hover:text-slate-100'
-                  }`}
-              >
-                <menu.icon size={18} />
-                <span>{menu.title}</span>
-              </Link>
-            );
-          }
-
-          const isSubActive = isParentActive(menu.prefix);
-
-          return (
-            <div key={idx} className="space-y-1">
-              <button
-                onClick={() => menu.setState(!menu.state)}
-                className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-all duration-150 ${isSubActive
-                    ? 'text-indigo-400 bg-slate-800/40'
-                    : 'hover:bg-slate-800 hover:text-slate-100'
-                  }`}
-              >
-                <div className="flex items-center space-x-3">
+        {menuItems
+          .filter((menu) => hasAccess(menu.roleRequired))
+          .map((menu, idx) => {
+            if (menu.type === "link") {
+              return (
+                <Link
+                  key={idx}
+                  to={menu.path}
+                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-150 ${isActive(menu.path)
+                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/15"
+                    : "hover:bg-slate-800 hover:text-slate-100"
+                    }`}
+                >
                   <menu.icon size={18} />
                   <span>{menu.title}</span>
-                </div>
-                {menu.state ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              </button>
+                </Link>
+              );
+            }
 
-              {menu.state && (
-                <div className="pl-6 space-y-1 mt-1 border-l border-slate-800 ml-6">
-                  {filteredChildren(menu).map((child, cIdx) => (
-                    <Link
-                      key={cIdx}
-                      to={child.path}
-                      className={`flex items-center space-x-3 px-4 py-2.5 rounded-lg text-xs font-medium transition-all duration-150 ${isActive(child.path)
-                          ? 'bg-indigo-600/95 text-white'
-                          : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-                        }`}
-                    >
-                      <child.icon size={14} />
-                      <span>{child.title}</span>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+            const isSubActive = isParentActive(menu.prefix);
+            const children = filteredChildren(menu);
+
+            // Jangan tampilkan submenu jika semua child terfilter
+            if (children.length === 0) return null;
+
+            return (
+              <div key={idx} className="space-y-1">
+                <button
+                  onClick={() => menu.setState(!menu.state)}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-all duration-150 ${isSubActive
+                    ? "text-indigo-400 bg-slate-800/40"
+                    : "hover:bg-slate-800 hover:text-slate-100"
+                    }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <menu.icon size={18} />
+                    <span>{menu.title}</span>
+                  </div>
+
+                  {menu.state ? (
+                    <ChevronDown size={14} />
+                  ) : (
+                    <ChevronRight size={14} />
+                  )}
+                </button>
+
+                {menu.state && (
+                  <div className="pl-6 space-y-1 mt-1 border-l border-slate-800 ml-6">
+                    {children.map((child, cIdx) => (
+                      <Link
+                        key={cIdx}
+                        to={child.path}
+                        className={`flex items-center space-x-3 px-4 py-2.5 rounded-lg text-xs font-medium transition-all duration-150 ${isActive(child.path)
+                          ? "bg-indigo-600/95 text-white"
+                          : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                          }`}
+                      >
+                        <child.icon size={14} />
+                        <span>{child.title}</span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
       </nav>
 
-      {/* User Session Info & Logout in Sidebar for Mobile */}
+      {/* Footer */}
       <div className="p-4 border-t border-slate-800 bg-slate-950">
         <div className="flex items-center space-x-3 px-2 py-1.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-800 text-indigo-400 ring-2 ring-indigo-500/20">
             <User size={18} />
           </div>
+
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-white truncate">{user?.name}</p>
-            <p className="text-[10px] text-slate-500 truncate">{userRoleName}</p>
+            <p className="text-xs font-semibold text-white truncate">
+              {user?.name}
+            </p>
+            <p className="text-[10px] text-slate-500 truncate">
+              {userRoleName}
+            </p>
           </div>
         </div>
+
         <button
           onClick={handleLogout}
           className="mt-3 w-full flex items-center justify-center space-x-2 rounded-lg bg-rose-500/10 py-2 text-xs font-semibold text-rose-400 hover:bg-rose-500 hover:text-white transition-all duration-150"

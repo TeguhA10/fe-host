@@ -20,8 +20,10 @@ export default function PurchasingDashboard() {
       try {
         const pos = await purchaseOrderService.getAll();
         
-        // Count for current month (June 2026 in our mock universe)
-        const currentMonthPos = pos.filter(po => po.createdAt.startsWith('2026-06'));
+        // Count for current month dynamically
+        const now = new Date();
+        const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const currentMonthPos = pos.filter(po => po.createdAt && po.createdAt.startsWith(currentYearMonth));
         const totalCount = currentMonthPos.length;
         
         const pendingCount = pos.filter(po => po.status === 'Submitted').length;

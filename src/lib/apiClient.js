@@ -1,5 +1,7 @@
+const authChannel = new BroadcastChannel('auth_channel');
 let isRefreshing = false;
 let failedQueue = [];
+let isSessionDead = false;
 
 const processQueue = (error) => {
   failedQueue.forEach((prom) => {
@@ -21,12 +23,30 @@ const request = async (url, options = {}) => {
     ...options.headers,
   };
 
+  // Reset or set session state flags on explicit login/logout requests
+  if (url.includes('/api/auth/login')) {
+    isSessionDead = false;
+    isRefreshing = false;
+    failedQueue = [];
+  } else if (url.includes('/api/auth/logout')) {
+    isSessionDead = true;
+    isRefreshing = false;
+    failedQueue = [];
+  }
+
   try {
     const response = await fetch(url, options);
 
     if (response.status === 401) {
+      if (isSessionDead) {
+        throw new Error('Session is dead');
+      }
+
       // If unauthorized on login or refresh, do not retry
       if (url.includes('/api/auth/login') || url.includes('/api/auth/refresh')) {
+        if (url.includes('/api/auth/refresh')) {
+          isSessionDead = true;
+        }
         const error = await response.json().catch(() => ({ message: 'Autentikasi gagal' }));
         throw new Error(error.message || `HTTP error! status: ${response.status}`);
       }
@@ -62,14 +82,27 @@ const request = async (url, options = {}) => {
         return request(url, options);
       } catch (refreshError) {
         isRefreshing = false;
+        isSessionDead = true;
         processQueue(refreshError);
-        window.location.href = '/login';
+
+        // Notify other tabs that the session has ended
+        try {
+          authChannel.postMessage({ type: 'LOGOUT' });
+        } catch (e) {
+          console.error('Failed to post logout message to BroadcastChannel:', e);
+        }
+
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
         throw refreshError;
       }
     }
 
     if (response.status === 403) {
-      window.location.href = '/403';
+      if (window.location.pathname !== '/403') {
+        window.location.href = '/403';
+      }
       throw new Error('Akses ditolak (403)');
     }
 

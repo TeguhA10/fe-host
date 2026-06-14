@@ -20,6 +20,10 @@ export default function PurchaseOrderDetail() {
   const [isRejectOpen, setIsRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
 
+  // Receive dialog states
+  const [isReceiveOpen, setIsReceiveOpen] = useState(false);
+  const [tanggalPengiriman, setTanggalPengiriman] = useState(new Date().toISOString().split('T')[0]);
+
   const fetchPoDetails = async () => {
     try {
       setLoading(true);
@@ -47,14 +51,32 @@ export default function PurchaseOrderDetail() {
         await purchaseOrderService.submit(id, user.id);
       } else if (actionType === 'Approve') {
         await purchaseOrderService.approve(id, user.id);
-      } else if (actionType === 'Receive') {
-        await purchaseOrderService.receive(id, user.id);
       } else if (actionType === 'Cancel') {
         await purchaseOrderService.cancel(id, user.id);
       }
       fetchPoDetails();
     } catch (err) {
       setError(err.message || `Gagal mengeksekusi tindakan ${actionType}.`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReceiveSubmit = async (e) => {
+    e.preventDefault();
+    if (!tanggalPengiriman) {
+      alert('Tanggal pengiriman wajib diisi.');
+      return;
+    }
+
+    setActionLoading(true);
+    setError('');
+    try {
+      await purchaseOrderService.receive(id, user.id, tanggalPengiriman);
+      setIsReceiveOpen(false);
+      fetchPoDetails();
+    } catch (err) {
+      setError(err.message || 'Gagal menerima Purchase Order.');
     } finally {
       setActionLoading(false);
     }
@@ -191,7 +213,7 @@ export default function PurchaseOrderDetail() {
             {/* 3. APPROVED ACTIONS */}
             {po.status === 'Approved' && (isBranchAdmin || isBranchStaff || isSuperadmin) && (
               <button
-                onClick={() => handleAction('Receive')}
+                onClick={() => setIsReceiveOpen(true)}
                 className="inline-flex items-center justify-center space-x-1.5 rounded-xl bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-555 shadow-md shadow-teal-600/10 transition-all"
               >
                 <PackageOpen size={14} />
@@ -243,6 +265,10 @@ export default function PurchaseOrderDetail() {
                 <span className="text-slate-450">Diajukan Oleh:</span>
                 <span className="font-semibold text-slate-700">{po.creatorDetails?.name}</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-slate-455">Tanggal Pengiriman:</span>
+                <span className="font-semibold text-slate-700">{po.tanggalPengiriman ? formatDate(po.tanggalPengiriman) : '-'}</span>
+              </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-455">Status PO:</span>
                 <StatusBadge status={po.status} />
@@ -263,6 +289,14 @@ export default function PurchaseOrderDetail() {
                 <p>Email: <span className="font-mono">{po.vendorDetails?.email}</span></p>
                 <p className="leading-relaxed">Alamat: {po.vendorDetails?.address}</p>
               </div>
+            </div>
+          </div>
+
+          {/* PO Notes card */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm space-y-3">
+            <h3 className="text-xs font-bold text-slate-450 uppercase tracking-wider">Catatan / Keterangan</h3>
+            <div className="text-xs text-slate-650 leading-relaxed bg-slate-50 border border-slate-100 p-3 rounded-xl font-medium whitespace-pre-wrap">
+              {po.catatan || '-'}
             </div>
           </div>
         </div>
@@ -353,6 +387,50 @@ export default function PurchaseOrderDetail() {
 
         </div>
       </div>
+
+      {/* Receive dialog date input modal */}
+      {isReceiveOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsReceiveOpen(false)}></div>
+          <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl border border-slate-100 animate-in fade-in zoom-in duration-200">
+            <h3 className="text-sm font-bold text-slate-855 mb-3">Terima Barang (Receive PO)</h3>
+            <p className="text-[11px] text-slate-455 mb-4 leading-relaxed">
+              Tentukan tanggal pengiriman barang yang sebenarnya untuk menyelesaikan Purchase Order <span className="font-bold text-slate-700">{po.poNumber}</span>.
+            </p>
+
+            <form onSubmit={handleReceiveSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-455 uppercase mb-2">Tanggal Pengiriman</label>
+                <input
+                  type="date"
+                  value={tanggalPengiriman}
+                  onChange={(e) => setTanggalPengiriman(e.target.value)}
+                  className="block w-full rounded-xl border border-slate-200 px-3 py-2.5 text-xs text-slate-850 focus:border-indigo-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="mt-6 flex justify-end space-x-2 border-t border-slate-100 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsReceiveOpen(false);
+                    setTanggalPengiriman(new Date().toISOString().split('T')[0]);
+                  }}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-655 hover:bg-slate-50"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-teal-500 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-500 shadow-lg shadow-teal-650/15"
+                >
+                  Simpan Penerimaan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Reject dialog reason input modal */}
       {isRejectOpen && (

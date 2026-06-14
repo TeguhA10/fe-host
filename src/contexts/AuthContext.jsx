@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService } from '../services/authService';
 
 const AuthContext = createContext(null);
+const authChannel = new BroadcastChannel('auth_channel');
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -23,6 +24,35 @@ export const AuthProvider = ({ children }) => {
       }
     };
     initAuth();
+  }, []);
+
+  // Listen to cross-tab auth messages
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.data && event.data.type === 'LOGOUT') {
+        setUser(null);
+        setToken(null);
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+      } else if (event.data && event.data.type === 'LOGIN') {
+        // Sync active login state in other tabs
+        authService.getProfile()
+          .then(freshUser => {
+            setUser(freshUser);
+            setToken("session-active");
+          })
+          .catch(() => {
+            setUser(null);
+            setToken(null);
+          });
+      }
+    };
+
+    authChannel.addEventListener('message', handleMessage);
+    return () => {
+      authChannel.removeEventListener('message', handleMessage);
+    };
   }, []);
 
   // Periodic silent refresh of the JWT access token
@@ -47,6 +77,11 @@ export const AuthProvider = ({ children }) => {
       const res = await authService.login(email, password);
       setUser(res.user);
       setToken("session-active");
+      try {
+        authChannel.postMessage({ type: 'LOGIN' });
+      } catch (e) {
+        // ignore
+      }
       return res;
     } catch (err) {
       throw err;
@@ -61,6 +96,11 @@ export const AuthProvider = ({ children }) => {
       await authService.logout();
       setUser(null);
       setToken(null);
+      try {
+        authChannel.postMessage({ type: 'LOGOUT' });
+      } catch (e) {
+        // ignore
+      }
     } finally {
       setLoading(false);
     }

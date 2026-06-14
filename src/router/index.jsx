@@ -55,7 +55,7 @@ export const router = createBrowserRouter([
     ),
     children: [
       { path: 'dashboard', element: <MainDashboard /> },
-      
+
       // HRIS Submodule
       {
         path: 'hris',
@@ -67,13 +67,13 @@ export const router = createBrowserRouter([
           { path: 'employees/:id/edit', element: <EmployeeForm /> },
           { path: 'branches', element: <BranchTree /> },
           { path: 'positions', element: <PositionTree /> },
-          { 
-            path: 'users', 
+          {
+            path: 'users',
             element: (
               <ProtectedRoute allowedRoles={['superadmin']}>
                 <UserList />
               </ProtectedRoute>
-            ) 
+            )
           }
         ]
       },
