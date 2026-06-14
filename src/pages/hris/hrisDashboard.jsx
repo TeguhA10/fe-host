@@ -2,16 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { employeeService } from '../../services/employeeService';
 import { branchService } from '../../services/branchService';
-import { Users, Store, GitMerge, FileWarning, Calendar, UserCheck } from 'lucide-react';
+import { positionService } from '../../services/positionService';
+import { Users, Store, GitMerge, FileWarning, Calendar, UserCheck, AlertCircle } from 'lucide-react';
 import { formatDate } from '../../utils/format';
-
-const DIVISIONS = [
-  'Executive Suite',
-  'Human Resources',
-  'Purchasing & Logistics',
-  'Information Technology',
-  'Finance & Accounting'
-];
 
 export default function HrisDashboard() {
   const [stats, setStats] = useState({
@@ -22,23 +15,29 @@ export default function HrisDashboard() {
     expiringContracts: []
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const loadDashboard = async () => {
       try {
         setLoading(true);
-        const [empRes, branchList] = await Promise.all([
+        setError(null);
+        const [empRes, branchList, positionList] = await Promise.all([
           employeeService.getAll({ limit: 1000 }), // Load full list for aggregates
-          branchService.getAll()
+          branchService.getAll(),
+          positionService.getAll()
         ]);
 
         const empList = empRes.data || empRes || [];
         const active = empList.filter(e => e.status === 'aktif');
         const branchCount = branchList.length;
-        const divisionCount = DIVISIONS.length;
         
-        const breakdown = DIVISIONS.map((divName, idx) => {
-          const count = active.filter(e => e.division.toLowerCase() === divName.toLowerCase()).length;
+        // Extract unique divisions from positions
+        const uniqueDivisions = [...new Set(positionList.map(p => p.division).filter(Boolean))];
+        const divisionCount = uniqueDivisions.length;
+        
+        const breakdown = uniqueDivisions.map((divName, idx) => {
+          const count = active.filter(e => e.division && e.division.toLowerCase() === divName.toLowerCase()).length;
           return {
             id: idx + 1,
             name: divName,
@@ -75,6 +74,7 @@ export default function HrisDashboard() {
         });
       } catch (err) {
         console.error('Failed to load HRIS dashboard stats:', err);
+        setError(err.message || 'Gagal memuat data Dashboard. Silakan muat ulang halaman.');
       } finally {
         setLoading(false);
       }
@@ -91,6 +91,13 @@ export default function HrisDashboard() {
         <h1 className="text-2xl font-bold text-slate-800">Dashboard HRIS</h1>
         <p className="text-sm text-slate-500 mt-1">Status dan overview kepegawaian PT. Anyar Retail Group</p>
       </div>
+
+      {error && (
+        <div className="flex items-start space-x-2 rounded-xl bg-rose-50 border border-rose-100 p-3.5 text-xs text-rose-600">
+          <AlertCircle size={16} className="shrink-0 mt-0.5" />
+          <span className="font-semibold leading-relaxed">{error}</span>
+        </div>
+      )}
 
       {/* Stats KPI Widgets */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

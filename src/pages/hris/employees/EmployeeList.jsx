@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { employeeService } from '../../../services/employeeService';
 import { branchService } from '../../../services/branchService';
 import { positionService } from '../../../services/positionService';
-import { Search, Plus, Eye, Trash2, Edit, ArrowUpDown, HelpCircle, Calendar } from 'lucide-react';
+import { Search, Plus, Eye, Trash2, Edit, ArrowUpDown, HelpCircle, Calendar, AlertCircle } from 'lucide-react';
 import { formatDate } from '../../../utils/format';
 
 export default function EmployeeList() {
@@ -11,6 +11,7 @@ export default function EmployeeList() {
   const [branches, setBranches] = useState([]);
   const [divisions, setDivisions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Filters State
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,6 +35,7 @@ export default function EmployeeList() {
   const fetchEmployees = async () => {
     try {
       setLoading(true);
+      setError(null);
       const res = await employeeService.getAll({
         page: currentPage,
         limit: itemsPerPage,
@@ -47,6 +49,7 @@ export default function EmployeeList() {
       setMeta(res.meta || { page: 1, limit: itemsPerPage, total: 0, totalPages: 1 });
     } catch (err) {
       console.error(err);
+      setError(err.message || 'Gagal mengambil data karyawan dari server.');
     } finally {
       setLoading(false);
     }
@@ -56,14 +59,18 @@ export default function EmployeeList() {
   useEffect(() => {
     const loadFiltersData = async () => {
       try {
-        const bData = await branchService.getAll();
-        setBranches(bData);
+        setError(null);
+        const [bData, pData] = await Promise.all([
+          branchService.getAll(),
+          positionService.getAll()
+        ]);
+        setBranches(bData || []);
         
-        const pData = await positionService.getAll();
-        const uniqueDivisions = [...new Set(pData.map(p => p.division).filter(Boolean))];
+        const uniqueDivisions = [...new Set((pData || []).map(p => p.division).filter(Boolean))];
         setDivisions(uniqueDivisions);
       } catch (e) {
         console.error(e);
+        setError(e.message || 'Gagal memuat opsi filter (cabang/divisi) dari server.');
       }
     };
     loadFiltersData();
@@ -82,6 +89,7 @@ export default function EmployeeList() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
+      setError(null);
       await employeeService.delete(deleteTarget.id);
       setDeleteTarget(null);
       fetchEmployees();
@@ -133,6 +141,13 @@ export default function EmployeeList() {
           <span>Tambah Karyawan</span>
         </Link>
       </div>
+
+      {error && (
+        <div className="flex items-start space-x-2 rounded-xl bg-rose-50 border border-rose-100 p-3.5 text-xs text-rose-600">
+          <AlertCircle size={16} className="shrink-0 mt-0.5" />
+          <span className="font-semibold leading-relaxed">{error}</span>
+        </div>
+      )}
 
       {/* Advanced Filters Panel */}
       <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm space-y-4">

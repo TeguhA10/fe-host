@@ -19,7 +19,7 @@ export default function PurchaseOrderList() {
   const [branchFilter, setBranchFilter] = useState('');
   const [vendorFilter, setVendorFilter] = useState('');
   const [dateFilter, setDateFilter] = useState('');
-  
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
@@ -86,7 +86,7 @@ export default function PurchaseOrderList() {
         </div>
         <Link
           to="/purchasing/purchase-orders/new"
-          className="inline-flex items-center justify-center space-x-2 rounded-xl bg-indigo-650 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-indigo-600/15 hover:bg-indigo-500 transition-all duration-150 self-start sm:self-auto"
+          className="inline-flex items-center justify-center space-x-2 rounded-xl bg-indigo-500 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-indigo-600/15 hover:bg-indigo-500 transition-all duration-150 self-start sm:self-auto"
         >
           <Plus size={15} />
           <span>Buat PO Baru</span>
@@ -269,8 +269,8 @@ export default function PurchaseOrderList() {
                         key={idx}
                         onClick={() => setCurrentPage(idx + 1)}
                         className={`rounded-lg px-3 py-1 text-xs font-semibold ${meta.page === idx + 1
-                            ? 'bg-indigo-650 text-white shadow-sm'
-                            : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                          ? 'bg-indigo-650 text-white shadow-sm'
+                          : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                           }`}
                       >
                         {idx + 1}

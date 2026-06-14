@@ -7,7 +7,7 @@ const mapEmployee = (emp) => {
   const levels = { 1: 'Director', 2: 'Manager', 3: 'Supervisor', 4: 'Staff' };
   const mappedLevel = levels[emp.position?.level] || emp.level || 'Staff';
 
-  const divisionName = emp.position?.division || 'Information Technology';
+  const divisionName = emp.position?.division || '-';
 
   return {
     id: emp.id,
