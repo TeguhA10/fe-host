@@ -1,0 +1,452 @@
+{
+  "info": {
+    "_postman_id": "6b089dd9-1dd9-41e0-bb11-c11eacbca89a",
+    "name": "EMPLOYEE SERVICE",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "38912657"
+  },
+  "item": [
+    {
+      "name": "branches list",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8001/api/branches",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8001",
+          "path": [
+            "api",
+            "branches"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "branches by id",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8001/api/branches/2",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8001",
+          "path": [
+            "api",
+            "branches",
+            "2"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "branches create",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"name\": \"Area Jawa Timur\",\r\n    \"code\": \"JTM\",\r\n    \"parent_id\": 1,\r\n    \"address\": \"Surabaya\",\r\n    \"is_active\": true\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8001/api/branches",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8001",
+          "path": [
+            "api",
+            "branches"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "branches update",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"name\": \"Area Jawa Timur\",\r\n    \"code\": \"JTM\",\r\n    \"parent_id\": 1,\r\n    \"address\": \"Surabaya\",\r\n    \"is_active\": false\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8001/api/branches/7",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8001",
+          "path": [
+            "api",
+            "branches",
+            "7"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "branches deleted",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8001/api/branches/7",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8001",
+          "path": [
+            "api",
+            "branches",
+            "7"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "positions list",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8001/api/positions",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8001",
+          "path": [
+            "api",
+            "positions"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "positions by id",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8001/api/positions/2",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8001",
+          "path": [
+            "api",
+            "positions",
+            "2"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "positions create",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"name\": \"Manager Marketing\",\r\n    \"level\": 3,\r\n    \"division\": \"Marketing\",\r\n    \"parent_position_id\": 1,\r\n    \"branch_id\": 1,\r\n    \"branch\": \"Kantor Pusat\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8001/api/positions",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8001",
+          "path": [
+            "api",
+            "positions"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "positions update",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"name\": \"Manager Marketing\",\r\n    \"level\": 2,\r\n    \"division\": \"Marketing\",\r\n    \"parent_position_id\": 1,\r\n    \"branch_id\": 1,\r\n    \"branch\": \"Kantor Pusat\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8001/api/positions/11",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8001",
+          "path": [
+            "api",
+            "positions",
+            "11"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "positions delete",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8001/api/positions/11",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8001",
+          "path": [
+            "api",
+            "positions",
+            "11"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "employee list",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8001/api/employees",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8001",
+          "path": [
+            "api",
+            "employees"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "employe by id",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8001/api/employees/2",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8001",
+          "path": [
+            "api",
+            "employees",
+            "2"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "employee create",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"user_id\": 1,\r\n    \"nama_lengkap\": \"Wildan Santoso\",\r\n    \"nomor_induk_karyawan\": \"2026.01.00001\",\r\n    \"alamat\": \"Jl. Cihampelas No. 12, Bandung\",\r\n    \"branch_id\": 3,\r\n    \"position_id\": 2,\r\n    \"tanggal_gabung\": \"2026-01-15\",\r\n    \"tanggal_mulai_kontrak\": \"2027-01-15\",\r\n    \"tanggal_akhir_kontrak\": null,\r\n    \"status\": \"aktif\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8001/api/employees",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8001",
+          "path": [
+            "api",
+            "employees"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "employee update",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"user_id\": 1,\r\n    \"nama_lengkap\": \"Wildan Santoso\",\r\n    \"nomor_induk_karyawan\": \"2026.01.00001\",\r\n    \"alamat\": \"Jl. Cihampelas No. 12, Bandung\",\r\n    \"branch_id\": 3,\r\n    \"position_id\": 2,\r\n    \"tanggal_gabung\": \"2026-01-15\",\r\n    \"tanggal_mulai_kontrak\": \"2027-01-15\",\r\n    \"tanggal_akhir_kontrak\": null,\r\n    \"status\": \"nonaktif\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8001/api/employees/22",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8001",
+          "path": [
+            "api",
+            "employees",
+            "22"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "employee delete",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8001/api/employees/22",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8001",
+          "path": [
+            "api",
+            "employees",
+            "22"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "employee organisasi",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8001/api/employees/2/org-tree",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8001",
+          "path": [
+            "api",
+            "employees",
+            "2",
+            "org-tree"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
