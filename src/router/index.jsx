@@ -12,6 +12,7 @@ import { ProtectedRoute } from './ProtectedRoute';
 import Login from '../pages/auth/Login';
 import MainDashboard from '../pages/dashboard/MainDashboard';
 import NotFound from '../pages/errors/NotFound';
+import Forbidden from '../pages/errors/Forbidden';
 
 // HRIS Pages
 import HrisDashboard from '../pages/hris/hrisDashboard';
@@ -99,6 +100,7 @@ export const router = createBrowserRouter([
   },
 
   // Fallbacks and Error routes
+  { path: '403', element: <Forbidden /> },
   { path: '404', element: <NotFound /> },
   { path: '*', element: <Navigate to="/404" replace /> }
 ]);

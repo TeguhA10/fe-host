@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { positionService } from '../../../services/positionService';
 import { Plus, Edit2, Trash2, Shield, ShieldAlert, Loader, AlertCircle } from 'lucide-react';
-import { getDB } from '../../../data/db';
+import { employeeService } from '../../../services/employeeService';
 
 export default function PositionTree() {
   const [treeData, setTreeData] = useState([]);
   const [flatPositions, setFlatPositions] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -21,8 +22,10 @@ export default function PositionTree() {
       setError('');
       const tree = await positionService.getTree();
       const flat = await positionService.getAll();
+      const emps = await employeeService.getAll();
       setTreeData(tree);
       setFlatPositions(flat);
+      setEmployees(emps);
     } catch (err) {
       setError(err.message || 'Gagal memuat struktur jabatan.');
     } finally {
@@ -79,9 +82,8 @@ export default function PositionTree() {
   };
 
   // Count employees in position
-  const db = getDB();
   const getEmployeeCount = (positionId) => {
-    return db.employees.filter(emp => emp.positionId === positionId && emp.status === 'Active').length;
+    return employees.filter(emp => emp.positionId === positionId && emp.status === 'aktif').length;
   };
 
   // Recursive Position Node Component
@@ -95,7 +97,7 @@ export default function PositionTree() {
         {/* Position card layout */}
         <div className="flex items-center justify-between p-3.5 bg-white border border-slate-205/75 rounded-xl shadow-sm hover:shadow-md transition-all duration-200">
           <div className="flex items-center space-x-3">
-            <button 
+            <button
               onClick={() => setCollapsed(!collapsed)}
               className="text-slate-400 hover:text-indigo-600 transition-colors p-1"
             >
@@ -206,7 +208,7 @@ export default function PositionTree() {
             <h3 className="text-sm font-bold text-slate-800 mb-4">
               {modalMode === 'create' ? 'Tambah Jabatan' : 'Ubah Jabatan'}
             </h3>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-[10px] font-bold text-slate-450 uppercase mb-2">Nama Jabatan</label>
@@ -267,7 +269,7 @@ export default function PositionTree() {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-indigo-650 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 shadow-lg shadow-indigo-650/10"
+                  className="rounded-lg bg-indigo-500 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 shadow-lg shadow-indigo-650/10"
                 >
                   Simpan
                 </button>

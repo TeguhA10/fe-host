@@ -3,8 +3,7 @@ import { Link } from 'react-router-dom';
 import { employeeService } from '../../../services/employeeService';
 import { branchService } from '../../../services/branchService';
 import { positionService } from '../../../services/positionService';
-import { getDB } from '../../../data/db';
-import { Search, Plus, Filter, Edit, Eye, Trash2, ArrowUpDown, HelpCircle } from 'lucide-react';
+import { Search, Plus, Eye, Trash2, Edit, ArrowUpDown, HelpCircle, Calendar } from 'lucide-react';
 import { formatDate } from '../../../utils/format';
 
 export default function EmployeeList() {
@@ -19,10 +18,13 @@ export default function EmployeeList() {
   const [selectedDivision, setSelectedDivision] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
 
-  // Sorting
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [meta, setMeta] = useState({ page: 1, limit: 5, total: 0, totalPages: 1 });
+
+  // Sorting State
   const [sortField, setSortField] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
 
@@ -32,12 +34,17 @@ export default function EmployeeList() {
   const fetchEmployees = async () => {
     try {
       setLoading(true);
-      const data = await employeeService.getAll();
-      const bData = await branchService.getAll();
-      const db = getDB();
-      setEmployees(data);
-      setBranches(bData);
-      setDivisions(db.divisions || []);
+      const res = await employeeService.getAll({
+        page: currentPage,
+        limit: itemsPerPage,
+        search: searchTerm,
+        branchId: selectedBranch,
+        division: selectedDivision,
+        level: selectedLevel,
+        status: selectedStatus
+      });
+      setEmployees(res.data || []);
+      setMeta(res.meta || { page: 1, limit: itemsPerPage, total: 0, totalPages: 1 });
     } catch (err) {
       console.error(err);
     } finally {
@@ -45,9 +52,32 @@ export default function EmployeeList() {
     }
   };
 
+  // Load branches & divisions options once on mount
+  useEffect(() => {
+    const loadFiltersData = async () => {
+      try {
+        const bData = await branchService.getAll();
+        setBranches(bData);
+        
+        const pData = await positionService.getAll();
+        const uniqueDivisions = [...new Set(pData.map(p => p.division).filter(Boolean))];
+        setDivisions(uniqueDivisions);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    loadFiltersData();
+  }, []);
+
+  // Fetch employees when filters, limit, or pages change
   useEffect(() => {
     fetchEmployees();
-  }, []);
+  }, [currentPage, itemsPerPage, searchTerm, selectedBranch, selectedDivision, selectedLevel, selectedStatus]);
+
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedBranch, selectedDivision, selectedLevel, selectedStatus]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -66,35 +96,17 @@ export default function EmployeeList() {
     setSortOrder(isAsc ? 'desc' : 'asc');
   };
 
-  // Helper to resolve branch and position name
-  const db = getDB();
-  const getBranchName = (id) => db.branches.find(b => b.id === id)?.name || '-';
-  const getDivisionName = (id) => db.divisions.find(d => d.id === id)?.name || '-';
-  const getPositionName = (id) => db.positions.find(p => p.id === id)?.name || '-';
-
-  // Apply filters
-  const filteredEmployees = employees.filter(emp => {
-    const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          emp.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesBranch = selectedBranch ? emp.branchId === parseInt(selectedBranch) : true;
-    const matchesDivision = selectedDivision ? emp.divisionId === parseInt(selectedDivision) : true;
-    const matchesLevel = selectedLevel ? emp.level === selectedLevel : true;
-    const matchesStatus = selectedStatus ? emp.status === selectedStatus : true;
-
-    return matchesSearch && matchesBranch && matchesDivision && matchesLevel && matchesStatus;
-  });
-
-  // Apply sorting
-  const sortedEmployees = [...filteredEmployees].sort((a, b) => {
+  // Apply sorting locally on current page results
+  const sortedEmployees = [...employees].sort((a, b) => {
     let aValue = a[sortField];
     let bValue = b[sortField];
 
     if (sortField === 'branch') {
-      aValue = getBranchName(a.branchId);
-      bValue = getBranchName(b.branchId);
+      aValue = a.branchName;
+      bValue = b.branchName;
     } else if (sortField === 'division') {
-      aValue = getDivisionName(a.divisionId);
-      bValue = getDivisionName(b.divisionId);
+      aValue = a.division;
+      bValue = b.division;
     }
 
     if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
@@ -102,19 +114,8 @@ export default function EmployeeList() {
     return 0;
   });
 
-  // Apply pagination
-  const totalPages = Math.ceil(sortedEmployees.length / itemsPerPage);
-  const paginatedEmployees = sortedEmployees.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  useEffect(() => {
-    setCurrentPage(1); // Reset page on filter change
-  }, [searchTerm, selectedBranch, selectedDivision, selectedLevel, selectedStatus]);
-
   const levelOptions = ['Director', 'Manager', 'Supervisor', 'Staff'];
-  const statusOptions = ['Active', 'Inactive'];
+  const statusOptions = ['aktif', 'nonaktif'];
 
   return (
     <div className="space-y-6">
@@ -126,7 +127,7 @@ export default function EmployeeList() {
         </div>
         <Link
           to="/hris/employees/new"
-          className="inline-flex items-center justify-center space-x-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-indigo-600/15 hover:bg-indigo-500 transition-all duration-150 self-start sm:self-auto"
+          className="inline-flex items-center justify-center space-x-2 rounded-xl bg-indigo-500 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-indigo-600/15 hover:bg-indigo-500 transition-all duration-150 self-start sm:self-auto"
         >
           <Plus size={15} />
           <span>Tambah Karyawan</span>
@@ -173,7 +174,7 @@ export default function EmployeeList() {
             >
               <option value="">Semua Divisi</option>
               {divisions.map(d => (
-                <option key={d.id} value={d.id}>{d.name}</option>
+                <option key={d} value={d}>{d}</option>
               ))}
             </select>
           </div>
@@ -187,7 +188,7 @@ export default function EmployeeList() {
             >
               <option value="">Semua Status</option>
               {statusOptions.map(st => (
-                <option key={st} value={st}>{st === 'Active' ? 'Aktif' : 'Non-Aktif'}</option>
+                <option key={st} value={st}>{st === 'aktif' ? 'Aktif' : 'Non-Aktif'}</option>
               ))}
             </select>
           </div>
@@ -200,7 +201,7 @@ export default function EmployeeList() {
           <div className="flex h-48 items-center justify-center">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent"></div>
           </div>
-        ) : paginatedEmployees.length === 0 ? (
+        ) : sortedEmployees.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-slate-400">
             <HelpCircle size={40} className="text-slate-300 mb-3" />
             <p className="text-sm font-semibold">Karyawan tidak ditemukan</p>
@@ -237,14 +238,14 @@ export default function EmployeeList() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs text-slate-650">
-                  {paginatedEmployees.map(emp => (
+                  {sortedEmployees.map(emp => (
                     <tr key={emp.id} className="hover:bg-slate-50/40">
                       {/* Name / Contact details */}
                       <td className="p-4">
                         <div className="flex items-center space-x-3">
-                          <img 
-                            src={emp.photo} 
-                            alt={emp.name} 
+                          <img
+                            src={emp.photo}
+                            alt={emp.name}
                             className="h-9 w-9 rounded-full object-cover ring-2 ring-slate-100"
                           />
                           <div>
@@ -255,17 +256,17 @@ export default function EmployeeList() {
                       </td>
 
                       {/* Branch details */}
-                      <td className="p-4 font-medium">{getBranchName(emp.branchId)}</td>
+                      <td className="p-4 font-medium">{emp.branchName}</td>
 
                       {/* Division details */}
                       <td className="p-4">
-                        <p className="font-medium text-slate-700">{getDivisionName(emp.divisionId)}</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">{getPositionName(emp.positionId)}</p>
+                        <p className="font-medium text-slate-700">{emp.division}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{emp.positionName}</p>
                       </td>
 
                       {/* Job level */}
                       <td className="p-4">
-                        <span className="inline-flex items-center rounded-md bg-slate-50 px-2 py-1 text-[10px] font-semibold text-slate-600 ring-1 ring-inset ring-slate-500/10">
+                        <span className="inline-flex items-center rounded-md bg-slate-50 px-2 py-1 text-[10px] font-semibold text-slate-606 ring-1 ring-inset ring-slate-500/10">
                           {emp.level}
                         </span>
                       </td>
@@ -275,35 +276,34 @@ export default function EmployeeList() {
 
                       {/* Status Badges */}
                       <td className="p-4 text-center">
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
-                          emp.status === 'Active' 
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold ${emp.status === 'aktif'
                             ? 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20'
                             : 'bg-slate-100 text-slate-750 ring-1 ring-inset ring-slate-650/10'
-                        }`}>
-                          {emp.status === 'Active' ? 'Aktif' : 'Non-Aktif'}
+                          }`}>
+                          {emp.status === 'aktif' ? 'Aktif' : 'Non-Aktif'}
                         </span>
                       </td>
 
                       {/* Actions */}
                       <td className="p-4 text-center">
                         <div className="flex items-center justify-center space-x-1">
-                          <Link 
+                          <Link
                             to={`/hris/employees/${emp.id}`}
-                            className="p-1.5 text-slate-450 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                            className="p-1.5 text-slate-450 hover:text-indigo-650 hover:bg-indigo-50 rounded-lg transition-all"
                             title="Detail"
                           >
                             <Eye size={14} />
                           </Link>
-                          <Link 
+                          <Link
                             to={`/hris/employees/${emp.id}/edit`}
-                            className="p-1.5 text-slate-450 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+                            className="p-1.5 text-slate-455 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
                             title="Ubah"
                           >
                             <Edit size={14} />
                           </Link>
-                          <button 
+                          <button
                             onClick={() => setDeleteTarget(emp)}
-                            className="p-1.5 text-slate-450 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                            className="p-1.5 text-slate-455 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
                             title="Hapus"
                           >
                             <Trash2 size={14} />
@@ -317,44 +317,64 @@ export default function EmployeeList() {
             </div>
 
             {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4">
+            {meta.total > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-200 px-6 py-4 bg-slate-50/30">
+                <div className="flex items-center space-x-2 text-xs text-slate-500">
+                  <span>Tampilkan</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(parseInt(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="rounded-lg border border-slate-200 px-2 py-1 bg-white text-slate-750 font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                  <span>data per halaman</span>
+                </div>
+
                 <div className="text-xs text-slate-500 font-medium">
-                  Menampilkan <span className="font-semibold text-slate-700">{(currentPage - 1) * itemsPerPage + 1}</span> hingga{' '}
+                  Menampilkan <span className="font-semibold text-slate-700">{(meta.page - 1) * meta.limit + 1}</span> hingga{' '}
                   <span className="font-semibold text-slate-700">
-                    {Math.min(currentPage * itemsPerPage, filteredEmployees.length)}
+                    {Math.min(meta.page * meta.limit, meta.total)}
                   </span>{' '}
-                  dari <span className="font-semibold text-slate-700">{filteredEmployees.length}</span> karyawan
+                  dari <span className="font-semibold text-slate-700">{meta.total}</span> karyawan
                 </div>
-                <div className="flex space-x-1">
-                  <button
-                    onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-                    disabled={currentPage === 1}
-                    className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40"
-                  >
-                    Sebelumnya
-                  </button>
-                  {[...Array(totalPages)].map((_, idx) => (
+
+                {meta.totalPages > 1 && (
+                  <div className="flex space-x-1">
                     <button
-                      key={idx}
-                      onClick={() => setCurrentPage(idx + 1)}
-                      className={`rounded-lg px-3 py-1 text-xs font-semibold ${
-                        currentPage === idx + 1
-                          ? 'bg-indigo-650 text-white shadow-sm'
-                          : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
+                      onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                      disabled={meta.page === 1}
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40"
                     >
-                      {idx + 1}
+                      Sebelumnya
                     </button>
-                  ))}
-                  <button
-                    onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-                    disabled={currentPage === totalPages}
-                    className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40"
-                  >
-                    Selanjutnya
-                  </button>
-                </div>
+                    {[...Array(meta.totalPages)].map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentPage(idx + 1)}
+                        className={`rounded-lg px-3 py-1 text-xs font-semibold ${meta.page === idx + 1
+                            ? 'bg-indigo-650 text-white shadow-sm'
+                            : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                          }`}
+                      >
+                        {idx + 1}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setCurrentPage(p => Math.min(p + 1, meta.totalPages))}
+                      disabled={meta.page === meta.totalPages}
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                    >
+                      Selanjutnya
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </>
@@ -379,7 +399,7 @@ export default function EmployeeList() {
               </button>
               <button
                 onClick={handleDelete}
-                className="rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-500 shadow-lg shadow-rose-600/10"
+                className="rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-505 shadow-lg shadow-rose-600/10"
               >
                 Hapus
               </button>

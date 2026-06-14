@@ -1,101 +1,93 @@
-import { getDB, saveDB } from '../data/db';
+import { apiClient } from '../lib/apiClient';
+
+const mapItem = (item) => {
+  if (!item) return null;
+  const vendorName = item.default_vendor?.name || 'Unknown Vendor';
+
+  return {
+    id: item.id,
+    name: item.name,
+    sku: item.code, // Map backend 'code' to frontend 'sku'
+    category: item.category,
+    unit: item.unit || 'pcs',
+    description: item.description || '',
+    active: item.is_active,
+    defaultVendorId: item.default_vendor_id,
+    defaultVendorName: vendorName,
+    lastPrice: parseFloat(item.last_price)
+  };
+};
 
 export const itemService = {
-  getAll: async () => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const db = getDB();
-    
-    // Resolve vendor names for display
-    return (db.items || []).map(item => {
-      const vendor = db.vendors.find(v => v.id === item.defaultVendorId);
+  getAll: async (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.page) query.append('page', params.page);
+    if (params.limit) query.append('limit', params.limit);
+    if (params.search) query.append('search', params.search);
+    if (params.category) query.append('category', params.category);
+    if (params.status) {
+      query.append('is_active', params.status === 'active' ? '1' : '0');
+    }
+
+    const res = await apiClient.get(`/api/purchasing/items?${query.toString()}`);
+    const rawItems = res.data || [];
+    const meta = res.meta || { page: 1, limit: 10, total: rawItems.length, total_pages: 1 };
+    const mapped = rawItems.map(mapItem);
+
+    if (params.page || params.limit || params.search || params.category || params.status) {
       return {
-        ...item,
-        defaultVendorName: vendor ? vendor.name : 'Unknown Vendor'
+        data: mapped,
+        meta: {
+          page: meta.page,
+          limit: meta.limit,
+          total: meta.total,
+          totalPages: meta.total_pages
+        }
       };
-    });
+    }
+    return mapped;
   },
 
   getById: async (id) => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const db = getDB();
-    const item = db.items.find(item => item.id === parseInt(id));
-    if (!item) throw new Error('Item tidak ditemukan');
-    
-    const vendor = db.vendors.find(v => v.id === item.defaultVendorId);
-    return {
-      ...item,
-      defaultVendorName: vendor ? vendor.name : 'Unknown Vendor'
-    };
+    const res = await apiClient.get(`/api/purchasing/items/${id}`);
+    const item = res.data || res;
+    return mapItem(item);
   },
 
   create: async (itemData) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const db = getDB();
-
-    // Check SKU uniqueness
-    const skuExists = db.items.some(item => item.sku.toUpperCase() === itemData.sku.toUpperCase());
-    if (skuExists) {
-      throw new Error('SKU Item sudah terdaftar.');
-    }
-
-    const nextId = db.items.length > 0 ? Math.max(...db.items.map(item => item.id)) + 1 : 1;
-    const newItem = {
-      id: nextId,
+    const payload = {
+      code: itemData.sku.toUpperCase(),
       name: itemData.name,
-      sku: itemData.sku.toUpperCase(),
-      category: itemData.category,
-      active: itemData.active !== undefined ? itemData.active : true,
-      defaultVendorId: parseInt(itemData.defaultVendorId),
-      lastPrice: parseFloat(itemData.lastPrice)
+      description: itemData.description || '',
+      category: itemData.category || 'General',
+      unit: itemData.unit || 'pcs',
+      default_vendor_id: parseInt(itemData.defaultVendorId),
+      last_price: parseFloat(itemData.lastPrice) || 0,
+      is_active: itemData.active !== undefined ? itemData.active : true
     };
 
-    db.items.push(newItem);
-    saveDB(db);
-    return newItem;
+    const res = await apiClient.post('/api/purchasing/items', payload);
+    return mapItem(res.data || res);
   },
 
   update: async (id, itemData) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const db = getDB();
-    const index = db.items.findIndex(item => item.id === parseInt(id));
-
-    if (index === -1) throw new Error('Item tidak ditemukan');
-
-    // Check SKU uniqueness
-    const skuExists = db.items.some(item => item.id !== parseInt(id) && item.sku.toUpperCase() === itemData.sku.toUpperCase());
-    if (skuExists) {
-      throw new Error('SKU Item sudah terdaftar.');
-    }
-
-    db.items[index] = {
-      ...db.items[index],
+    const payload = {
+      code: itemData.sku.toUpperCase(),
       name: itemData.name,
-      sku: itemData.sku.toUpperCase(),
-      category: itemData.category,
-      active: itemData.active !== undefined ? itemData.active : db.items[index].active,
-      defaultVendorId: parseInt(itemData.defaultVendorId),
-      lastPrice: parseFloat(itemData.lastPrice)
+      description: itemData.description || '',
+      category: itemData.category || 'General',
+      unit: itemData.unit || 'pcs',
+      default_vendor_id: parseInt(itemData.defaultVendorId),
+      last_price: parseFloat(itemData.lastPrice) || 0,
+      is_active: itemData.active !== undefined ? itemData.active : true
     };
 
-    saveDB(db);
-    return db.items[index];
+    const res = await apiClient.put(`/api/purchasing/items/${id}`, payload);
+    return mapItem(res.data || res);
   },
 
   delete: async (id) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const db = getDB();
-    const itemId = parseInt(id);
-
-    // Verify item is not in any POs
-    const inPOs = db.purchaseOrders.some(po => 
-      po.items && po.items.some(poi => poi.itemId === itemId)
-    );
-    if (inPOs) {
-      throw new Error('Tidak dapat menghapus item yang sudah direferensikan dalam Purchase Order.');
-    }
-
-    db.items = db.items.filter(item => item.id !== itemId);
-    saveDB(db);
+    await apiClient.patch(`/api/purchasing/items/${id}/deactivate`);
     return true;
   }
 };

@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { getDB } from '../../data/db';
-import { Users, ShoppingBag, Store, Briefcase, FileCheck, ArrowRight, ShieldCheck } from 'lucide-react';
+import { employeeService } from '../../services/employeeService';
+import { branchService } from '../../services/branchService';
+import { vendorService } from '../../services/vendorService';
+import { purchaseOrderService } from '../../services/purchaseOrderService';
+import { Users, ShoppingBag, Store, FileCheck, ArrowRight, ShieldCheck } from 'lucide-react';
 import { formatRupiah } from '../../utils/format';
 
 export default function MainDashboard() {
@@ -14,24 +17,43 @@ export default function MainDashboard() {
     totalPoValue: 0,
     pendingPos: 0
   });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const db = getDB();
-    const activeEmps = db.employees.filter(e => e.status === 'Active').length;
-    const branches = db.branches.length;
-    const vendors = db.vendors.filter(v => v.active).length;
-    const pending = db.purchaseOrders.filter(po => po.status === 'Submitted').length;
-    const totalVal = db.purchaseOrders
-      .filter(po => po.status !== 'Cancelled' && po.status !== 'Rejected')
-      .reduce((sum, po) => sum + po.totalAmount, 0);
+    const loadStats = async () => {
+      try {
+        setLoading(true);
+        const [empRes, branchList, vendorRes, poRes] = await Promise.all([
+          employeeService.getAll({ limit: 1, status: 'Active' }),
+          branchService.getAll(),
+          vendorService.getAll({ limit: 1, status: 'active' }),
+          purchaseOrderService.getAll({ limit: 1000 })
+        ]);
 
-    setStats({
-      activeEmployees: activeEmps,
-      totalBranches: branches,
-      activeVendors: vendors,
-      totalPoValue: totalVal,
-      pendingPos: pending
-    });
+        const activeEmps = empRes.meta?.total || 0;
+        const totalBranches = branchList.length;
+        const activeVendors = vendorRes.meta?.total || 0;
+        
+        const poList = poRes.data || poRes || [];
+        const pending = poList.filter(po => po.status === 'Submitted').length;
+        const totalVal = poList
+          .filter(po => po.status !== 'Cancelled' && po.status !== 'Rejected')
+          .reduce((sum, po) => sum + po.totalAmount, 0);
+
+        setStats({
+          activeEmployees: activeEmps,
+          totalBranches: totalBranches,
+          activeVendors: activeVendors,
+          totalPoValue: totalVal,
+          pendingPos: pending
+        });
+      } catch (err) {
+        console.error('Failed to load dashboard stats:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadStats();
   }, []);
 
   const cardStyle = "bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-200 flex items-center space-x-4";
@@ -64,17 +86,17 @@ export default function MainDashboard() {
           </div>
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Karyawan Aktif</p>
-            <p className="text-2xl font-bold text-slate-800">{stats.activeEmployees}</p>
+            <p className="text-2xl font-bold text-slate-800">{loading ? '...' : stats.activeEmployees}</p>
           </div>
         </div>
 
         <div className={cardStyle}>
-          <div className="p-3 bg-emerald-50 text-emerald-650 rounded-xl">
+          <div className="p-3 bg-emerald-50 text-emerald-655 rounded-xl">
             <Store size={24} />
           </div>
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Cabang</p>
-            <p className="text-2xl font-bold text-slate-800">{stats.totalBranches}</p>
+            <p className="text-2xl font-bold text-slate-800">{loading ? '...' : stats.totalBranches}</p>
           </div>
         </div>
 
@@ -84,7 +106,7 @@ export default function MainDashboard() {
           </div>
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Vendor Aktif</p>
-            <p className="text-2xl font-bold text-slate-800">{stats.activeVendors}</p>
+            <p className="text-2xl font-bold text-slate-800">{loading ? '...' : stats.activeVendors}</p>
           </div>
         </div>
 
@@ -95,7 +117,7 @@ export default function MainDashboard() {
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nilai Transaksi PO</p>
             <p className="text-base font-bold text-slate-800 truncate" title={formatRupiah(stats.totalPoValue)}>
-              {formatRupiah(stats.totalPoValue)}
+              {loading ? '...' : formatRupiah(stats.totalPoValue)}
             </p>
           </div>
         </div>

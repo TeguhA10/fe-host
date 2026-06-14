@@ -1,80 +1,60 @@
-import { getDB, saveDB } from '../data/db';
+import { apiClient } from '../lib/apiClient';
+
+const mapUser = (apiUser) => {
+  if (!apiUser) return null;
+  return {
+    id: apiUser.id,
+    name: apiUser.name,
+    email: apiUser.email,
+    roleId: apiUser.role,
+    branchId: apiUser.branch_id,
+    active: apiUser.is_active
+  };
+};
 
 export const userService = {
   getAll: async () => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const db = getDB();
-    return db.users || [];
+    const res = await apiClient.get('/api/auth/users');
+    return (res.data || []).map(mapUser);
   },
 
   create: async (userData) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const db = getDB();
-
-    // Check if email already exists
-    const emailExists = db.users.some(u => u.email.toLowerCase() === userData.email.toLowerCase());
-    if (emailExists) {
-      throw new Error('Email sudah terdaftar.');
-    }
-
-    const nextId = db.users.length > 0 ? Math.max(...db.users.map(u => u.id)) + 1 : 1;
-    const newUser = {
-      id: nextId,
+    const payload = {
+      name: userData.name,
       email: userData.email,
       password: userData.password || 'password123',
-      name: userData.name,
-      roleId: userData.roleId,
-      branchId: parseInt(userData.branchId),
-      active: true
+      role: userData.roleId,
+      branch_id: userData.branchId ? parseInt(userData.branchId) : null,
+      is_active: true
     };
-
-    db.users.push(newUser);
-    saveDB(db);
-    return newUser;
+    const res = await apiClient.post('/api/auth/users', payload);
+    return mapUser(res.data);
   },
 
   update: async (id, userData) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const db = getDB();
-    const index = db.users.findIndex(u => u.id === parseInt(id));
-
-    if (index === -1) throw new Error('User tidak ditemukan');
-
-    // Check email uniqueness if email is changing
-    const emailExists = db.users.some(u => u.id !== parseInt(id) && u.email.toLowerCase() === userData.email.toLowerCase());
-    if (emailExists) {
-      throw new Error('Email sudah terdaftar.');
-    }
-
-    db.users[index] = {
-      ...db.users[index],
-      email: userData.email,
+    const payload = {
       name: userData.name,
-      roleId: userData.roleId,
-      branchId: parseInt(userData.branchId),
-      // Only update password if provided
+      email: userData.email,
+      role: userData.roleId,
+      branch_id: userData.branchId ? parseInt(userData.branchId) : null,
       ...(userData.password ? { password: userData.password } : {})
     };
-
-    saveDB(db);
-    return db.users[index];
+    const res = await apiClient.put(`/api/auth/users/${id}`, payload);
+    return mapUser(res.data);
   },
 
-  toggleActive: async (id) => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const db = getDB();
-    const index = db.users.findIndex(u => u.id === parseInt(id));
-
-    if (index === -1) throw new Error('User tidak ditemukan');
-
-    // Protect against self-deactivation
-    const currentUser = JSON.parse(localStorage.getItem('user'));
-    if (currentUser && currentUser.id === parseInt(id)) {
+  toggleActive: async (id, currentUserId) => {
+    const currentUsers = await userService.getAll();
+    const user = currentUsers.find(u => u.id === parseInt(id));
+    if (!user) throw new Error('User tidak ditemukan');
+    
+    if (currentUserId && parseInt(currentUserId) === parseInt(id)) {
       throw new Error('Anda tidak dapat menonaktifkan akun Anda sendiri.');
     }
 
-    db.users[index].active = !db.users[index].active;
-    saveDB(db);
-    return db.users[index];
+    const res = await apiClient.put(`/api/auth/users/${id}`, {
+      is_active: !user.active
+    });
+    return mapUser(res.data);
   }
 };

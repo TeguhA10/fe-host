@@ -10,7 +10,7 @@ export default function PurchaseOrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+
   const [po, setPo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -39,7 +39,7 @@ export default function PurchaseOrderDetail() {
 
   const handleAction = async (actionType) => {
     if (!window.confirm(`Apakah Anda yakin ingin mengeksekusi tindakan ${actionType} untuk PO ini?`)) return;
-    
+
     setActionLoading(true);
     setError('');
     try {
@@ -93,8 +93,8 @@ export default function PurchaseOrderDetail() {
     return (
       <div className="bg-white rounded-2xl border border-slate-205 p-8 text-center max-w-lg mx-auto shadow-sm">
         <p className="text-sm font-semibold text-rose-650">{error || 'Purchase Order tidak ditemukan.'}</p>
-        <Link 
-          to="/purchasing/purchase-orders" 
+        <Link
+          to="/purchasing/purchase-orders"
           className="mt-4 inline-flex items-center text-xs font-semibold text-indigo-650 hover:underline"
         >
           Kembali ke Daftar PO
@@ -121,11 +121,11 @@ export default function PurchaseOrderDetail() {
           <ChevronLeft size={16} />
           <span>Kembali ke Daftar PO</span>
         </button>
-        
+
         {/* Dynamic Contextual Action Buttons */}
         {!actionLoading && (
           <div className="flex flex-wrap gap-2">
-            
+
             {/* 1. DRAFT ACTIONS */}
             {po.status === 'Draft' && (isCreator || isSuperadmin) && (
               <>
@@ -138,7 +138,7 @@ export default function PurchaseOrderDetail() {
                 </Link>
                 <button
                   onClick={() => handleAction('Submit')}
-                  className="inline-flex items-center justify-center space-x-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 shadow-md shadow-indigo-600/10 transition-all"
+                  className="inline-flex items-center justify-center space-x-1.5 rounded-xl bg-indigo-500 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 shadow-md shadow-indigo-600/10 transition-all"
                 >
                   <Play size={13} />
                   <span>Ajukan (Submit)</span>
@@ -219,13 +219,13 @@ export default function PurchaseOrderDetail() {
 
       {/* Grid: PO Details Sheet */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-all">
-        
+
         {/* Left Side: Metadata summary and supplier Cards */}
         <div className="space-y-6">
           {/* Header Metadata Info */}
           <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm space-y-4">
             <h3 className="text-xs font-bold text-slate-450 uppercase tracking-wider">Informasi Dokumen PO</h3>
-            
+
             <div className="space-y-3 text-xs">
               <div className="flex justify-between">
                 <span className="text-slate-450">Nomor PO:</span>
@@ -253,11 +253,11 @@ export default function PurchaseOrderDetail() {
           {/* Supplier details card */}
           <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm space-y-3">
             <h3 className="text-xs font-bold text-slate-450 uppercase tracking-wider">Detail Vendor Supplier</h3>
-            
+
             <div className="text-xs space-y-2">
               <p className="font-bold text-slate-800 text-sm">{po.vendorDetails?.name}</p>
               <p className="font-mono text-slate-400 text-[10px] uppercase">{po.vendorDetails?.code}</p>
-              
+
               <div className="border-t border-slate-100 pt-2.5 mt-2.5 space-y-2 text-slate-600">
                 <p>Narahubung: <span className="font-semibold text-slate-700">{po.vendorDetails?.contact}</span></p>
                 <p>Email: <span className="font-mono">{po.vendorDetails?.email}</span></p>
@@ -269,7 +269,7 @@ export default function PurchaseOrderDetail() {
 
         {/* Right Side: PO Items logs & status transition Timeline */}
         <div className="lg:col-span-2 space-y-6">
-          
+
           {/* PO items table listing card */}
           <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm overflow-hidden">
             <h3 className="text-sm font-bold text-slate-800 border-b border-slate-100 pb-3 mb-5">
@@ -363,7 +363,7 @@ export default function PurchaseOrderDetail() {
             <p className="text-[11px] text-slate-450 mb-4 leading-relaxed">
               Masukkan alasan penolakan untuk Purchase Order <span className="font-bold text-slate-700">{po.poNumber}</span>. Alasan ini akan tercatat di log timeline PO.
             </p>
-            
+
             <form onSubmit={handleRejectSubmit} className="space-y-4">
               <div>
                 <label className="block text-[10px] font-bold text-slate-450 uppercase mb-2">Alasan Penolakan</label>

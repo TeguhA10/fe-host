@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { purchaseOrderService } from '../../services/purchaseOrderService';
-import { getDB } from '../../data/db';
 import { FileText, FileClock, CircleDollarSign, Plus, Eye } from 'lucide-react';
 import { formatRupiah, formatDate } from '../../utils/format';
 import StatusBadge from '../../components/badges/StatusBadge';

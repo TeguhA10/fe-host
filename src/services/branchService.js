@@ -1,4 +1,16 @@
-import { getDB, saveDB } from '../data/db';
+import { apiClient } from '../lib/apiClient';
+
+const mapBranch = (b) => {
+  if (!b) return null;
+  return {
+    id: b.id,
+    name: b.name,
+    code: b.code,
+    parentId: b.parent_id,
+    address: b.address,
+    isActive: b.is_active
+  };
+};
 
 const buildBranchTree = (branches, parentId = null) => {
   return branches
@@ -11,71 +23,42 @@ const buildBranchTree = (branches, parentId = null) => {
 
 export const branchService = {
   getAll: async () => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const db = getDB();
-    return db.branches || [];
+    const res = await apiClient.get('/api/employee/branches');
+    const rawBranches = Array.isArray(res) ? res : (res.data || []);
+    return rawBranches.map(mapBranch);
   },
 
   getTree: async () => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const db = getDB();
-    return buildBranchTree(db.branches, null);
+    const flat = await branchService.getAll();
+    return buildBranchTree(flat, null);
   },
 
   create: async (branchData) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const db = getDB();
-    const nextId = db.branches.length > 0 ? Math.max(...db.branches.map(b => b.id)) + 1 : 1;
-
-    const newBranch = {
-      id: nextId,
+    const payload = {
       name: branchData.name,
       code: branchData.code,
-      parentId: branchData.parentId ? parseInt(branchData.parentId) : null
+      parent_id: branchData.parentId ? parseInt(branchData.parentId) : null,
+      address: branchData.address || 'Kantor Utama',
+      is_active: true
     };
-
-    db.branches.push(newBranch);
-    saveDB(db);
-    return newBranch;
+    const res = await apiClient.post('/api/employee/branches', payload);
+    return mapBranch(res.data || res);
   },
 
   update: async (id, branchData) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const db = getDB();
-    const index = db.branches.findIndex(b => b.id === parseInt(id));
-
-    if (index === -1) throw new Error('Cabang tidak ditemukan');
-
-    db.branches[index] = {
-      ...db.branches[index],
+    const payload = {
       name: branchData.name,
       code: branchData.code,
-      parentId: branchData.parentId ? parseInt(branchData.parentId) : null
+      parent_id: branchData.parentId ? parseInt(branchData.parentId) : null,
+      address: branchData.address || 'Kantor Utama',
+      is_active: branchData.isActive !== undefined ? branchData.isActive : true
     };
-
-    saveDB(db);
-    return db.branches[index];
+    const res = await apiClient.put(`/api/employee/branches/${id}`, payload);
+    return mapBranch(res.data || res);
   },
 
   delete: async (id) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const db = getDB();
-    const branchId = parseInt(id);
-
-    // Check if it has child nodes
-    const hasChildren = db.branches.some(b => b.parentId === branchId);
-    if (hasChildren) {
-      throw new Error('Tidak dapat menghapus cabang yang memiliki sub-cabang.');
-    }
-
-    // Check if any employees belong to this branch
-    const hasEmployees = db.employees.some(emp => emp.branchId === branchId);
-    if (hasEmployees) {
-      throw new Error('Tidak dapat menghapus cabang yang masih memiliki karyawan.');
-    }
-
-    db.branches = db.branches.filter(b => b.id !== branchId);
-    saveDB(db);
+    await apiClient.delete(`/api/employee/branches/${id}`);
     return true;
   }
 };

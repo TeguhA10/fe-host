@@ -1,92 +1,130 @@
-import { getDB, saveDB } from '../data/db';
+import { apiClient } from '../lib/apiClient';
+
+const parseContact = (contact) => {
+  if (!contact) return { contact_person: '-', phone: '-' };
+  const match = contact.match(/(.*?)\s*\((.*?)\)/);
+  if (match) {
+    return {
+      contact_person: match[1].trim(),
+      phone: match[2].trim()
+    };
+  }
+  return {
+    contact_person: contact,
+    phone: '-'
+  };
+};
+
+const mapVendor = (v) => {
+  if (!v) return null;
+  return {
+    id: v.id,
+    name: v.name,
+    code: v.code,
+    contact: v.phone ? `${v.contact_person} (${v.phone})` : v.contact_person,
+    email: v.email,
+    address: v.address,
+    npwp: v.npwp,
+    paymentTermDays: v.payment_term_days,
+    active: v.is_active
+  };
+};
 
 export const vendorService = {
-  getAll: async () => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const db = getDB();
-    return db.vendors || [];
+  getAll: async (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.page) query.append('page', params.page);
+    if (params.limit) query.append('limit', params.limit);
+    if (params.search) query.append('search', params.search);
+    if (params.status) {
+      query.append('is_active', params.status === 'active' ? '1' : '0');
+    }
+
+    const res = await apiClient.get(`/api/purchasing/vendors?${query.toString()}`);
+    const rawVendors = res.data || [];
+    const meta = res.meta || { page: 1, limit: 10, total: rawVendors.length, total_pages: 1 };
+    const mapped = rawVendors.map(mapVendor);
+
+    if (params.page || params.limit || params.search || params.status) {
+      return {
+        data: mapped,
+        meta: {
+          page: meta.page,
+          limit: meta.limit,
+          total: meta.total,
+          totalPages: meta.total_pages
+        }
+      };
+    }
+    return mapped;
   },
 
   getById: async (id) => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const db = getDB();
-    const vendor = db.vendors.find(v => v.id === parseInt(id));
-    if (!vendor) throw new Error('Vendor tidak ditemukan');
-
-    // Attach purchase order history
-    const poHistory = (db.purchaseOrders || []).filter(po => po.vendorId === vendor.id);
+    const res = await apiClient.get(`/api/purchasing/vendors/${id}`);
+    const vendor = res.data || res;
+    
+    // Fetch purchase history
+    let poHistory = [];
+    try {
+      const historyRes = await apiClient.get(`/api/purchasing/vendors/${id}/purchase-history`);
+      const rawHistory = Array.isArray(historyRes) ? historyRes : (historyRes.data || []);
+      poHistory = rawHistory.map(po => ({
+        id: po.id,
+        poNumber: po.po_number,
+        createdAt: po.created_at || po.tanggal_po,
+        totalAmount: parseFloat(po.total_amount),
+        status: po.status.charAt(0).toUpperCase() + po.status.slice(1).toLowerCase(),
+        branchName: po.branch_name || 'Unknown Branch'
+      }));
+    } catch (e) {
+      console.error('Failed to load purchase history:', e);
+    }
+    
+    const mappedVendor = mapVendor(vendor);
     return {
-      ...vendor,
+      ...mappedVendor,
       poHistory
     };
   },
 
   create: async (vendorData) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const db = getDB();
-
-    // Check code uniqueness
-    const codeExists = db.vendors.some(v => v.code.toUpperCase() === vendorData.code.toUpperCase());
-    if (codeExists) {
-      throw new Error('Kode Vendor sudah digunakan.');
-    }
-
-    const nextId = db.vendors.length > 0 ? Math.max(...db.vendors.map(v => v.id)) + 1 : 1;
-    const newVendor = {
-      id: nextId,
+    const { contact_person, phone } = parseContact(vendorData.contact);
+    const payload = {
       name: vendorData.name,
       code: vendorData.code.toUpperCase(),
-      contact: vendorData.contact,
-      email: vendorData.email,
-      address: vendorData.address,
-      active: vendorData.active !== undefined ? vendorData.active : true
+      contact_person,
+      phone,
+      email: vendorData.email || 'info@vendor.co.id',
+      address: vendorData.address || '-',
+      npwp: vendorData.npwp || '00.000.000.0-000.000',
+      payment_term_days: vendorData.paymentTermDays ? parseInt(vendorData.paymentTermDays) : 30,
+      is_active: vendorData.active !== undefined ? vendorData.active : true
     };
 
-    db.vendors.push(newVendor);
-    saveDB(db);
-    return newVendor;
+    const res = await apiClient.post('/api/purchasing/vendors', payload);
+    return mapVendor(res.data || res);
   },
 
   update: async (id, vendorData) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const db = getDB();
-    const index = db.vendors.findIndex(v => v.id === parseInt(id));
-
-    if (index === -1) throw new Error('Vendor tidak ditemukan');
-
-    // Check code uniqueness if changing code
-    const codeExists = db.vendors.some(v => v.id !== parseInt(id) && v.code.toUpperCase() === vendorData.code.toUpperCase());
-    if (codeExists) {
-      throw new Error('Kode Vendor sudah digunakan.');
-    }
-
-    db.vendors[index] = {
-      ...db.vendors[index],
+    const { contact_person, phone } = parseContact(vendorData.contact);
+    const payload = {
       name: vendorData.name,
       code: vendorData.code.toUpperCase(),
-      contact: vendorData.contact,
-      email: vendorData.email,
-      address: vendorData.address,
-      active: vendorData.active !== undefined ? vendorData.active : db.vendors[index].active
+      contact_person,
+      phone,
+      email: vendorData.email || 'info@vendor.co.id',
+      address: vendorData.address || '-',
+      npwp: vendorData.npwp || '00.000.000.0-000.000',
+      payment_term_days: vendorData.paymentTermDays ? parseInt(vendorData.paymentTermDays) : 30,
+      is_active: vendorData.active !== undefined ? vendorData.active : true
     };
 
-    saveDB(db);
-    return db.vendors[index];
+    const res = await apiClient.put(`/api/purchasing/vendors/${id}`, payload);
+    return mapVendor(res.data || res);
   },
 
   delete: async (id) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const db = getDB();
-    const vendorId = parseInt(id);
-
-    // Check if vendor has purchase orders
-    const hasPOs = db.purchaseOrders.some(po => po.vendorId === vendorId);
-    if (hasPOs) {
-      throw new Error('Tidak dapat menghapus vendor yang memiliki riwayat Purchase Order.');
-    }
-
-    db.vendors = db.vendors.filter(v => v.id !== vendorId);
-    saveDB(db);
+    await apiClient.patch(`/api/purchasing/vendors/${id}/deactivate`);
     return true;
   }
 };

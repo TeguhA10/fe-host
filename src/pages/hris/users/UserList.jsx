@@ -1,11 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { userService } from '../../../services/userService';
-import { getDB } from '../../../data/db';
+import { branchService } from '../../../services/branchService';
+import { useAuth } from '../../../contexts/AuthContext';
 import { Plus, Edit2, Shield, Power, User, Store, Loader, AlertCircle } from 'lucide-react';
 
+const ROLES = [
+  { id: 'superadmin', name: 'Super Admin' },
+  { id: 'admin_hrd', name: 'Admin HRD' },
+  { id: 'admin_purchasing', name: 'Admin Purchasing' },
+  { id: 'admin_cabang', name: 'Admin Cabang' },
+  { id: 'staff_purchasing', name: 'Staff Purchasing' },
+  { id: 'karyawan', name: 'Karyawan' }
+];
+
 export default function UserList() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
-  const [roles, setRoles] = useState([]);
+  const [roles, setRoles] = useState(ROLES);
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -27,10 +38,9 @@ export default function UserList() {
       setLoading(true);
       setError('');
       const data = await userService.getAll();
-      const db = getDB();
+      const branchList = await branchService.getAll();
       setUsers(data);
-      setRoles(db.roles || []);
-      setBranches(db.branches || []);
+      setBranches(branchList);
     } catch (err) {
       setError(err.message || 'Gagal memuat daftar pengguna.');
     } finally {
@@ -64,7 +74,7 @@ export default function UserList() {
   const handleToggleActive = async (id) => {
     try {
       setError('');
-      await userService.toggleActive(id);
+      await userService.toggleActive(id, currentUser?.id);
       fetchUsers();
     } catch (err) {
       setError(err.message || 'Gagal mengubah status aktif user.');
@@ -132,18 +142,16 @@ export default function UserList() {
           </div>
         ) : (
           users.map(u => (
-            <div 
+            <div
               key={u.id}
-              className={`bg-white rounded-2xl border p-5 shadow-sm hover:shadow-md transition-all duration-200 space-y-4 relative ${
-                !u.active ? 'border-slate-100 opacity-60 bg-slate-50/50' : 'border-slate-200/80'
-              }`}
+              className={`bg-white rounded-2xl border p-5 shadow-sm hover:shadow-md transition-all duration-200 space-y-4 relative ${!u.active ? 'border-slate-100 opacity-60 bg-slate-50/50' : 'border-slate-200/80'
+                }`}
             >
               {/* Card Header */}
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className={`p-2.5 rounded-xl ${
-                    u.roleId === 'superadmin' ? 'bg-purple-50 text-purple-650' : 'bg-indigo-50 text-indigo-650'
-                  }`}>
+                  <div className={`p-2.5 rounded-xl ${u.roleId === 'superadmin' ? 'bg-purple-50 text-purple-650' : 'bg-indigo-50 text-indigo-650'
+                    }`}>
                     <User size={18} />
                   </div>
                   <div>
@@ -151,12 +159,11 @@ export default function UserList() {
                     <p className="text-[10px] text-slate-400 font-semibold">{u.email}</p>
                   </div>
                 </div>
-                
-                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold ring-1 ring-inset ${
-                  u.active 
-                    ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' 
+
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold ring-1 ring-inset ${u.active
+                    ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
                     : 'bg-slate-100 text-slate-600 ring-slate-500/10'
-                }`}>
+                  }`}>
                   {u.active ? 'Aktif' : 'Non-Aktif'}
                 </span>
               </div>
@@ -177,11 +184,10 @@ export default function UserList() {
               <div className="flex items-center justify-end border-t border-slate-100 pt-3 space-x-2">
                 <button
                   onClick={() => handleToggleActive(u.id)}
-                  className={`inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-colors ${
-                    u.active 
+                  className={`inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-colors ${u.active
                       ? 'border-rose-100 text-rose-600 hover:bg-rose-50'
                       : 'border-emerald-100 text-emerald-600 hover:bg-emerald-50'
-                  }`}
+                    }`}
                   title={u.active ? 'Nonaktifkan Akun' : 'Aktifkan Akun'}
                 >
                   <Power size={11} />
@@ -208,7 +214,7 @@ export default function UserList() {
             <h3 className="text-sm font-bold text-slate-800 mb-4">
               {modalMode === 'create' ? 'Tambah Akun User' : 'Ubah Akun User'}
             </h3>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-[10px] font-bold text-slate-450 uppercase mb-2">Nama Lengkap</label>
@@ -282,7 +288,7 @@ export default function UserList() {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-indigo-650 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 shadow-lg shadow-indigo-650/10"
+                  className="rounded-lg bg-indigo-500 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 shadow-lg shadow-indigo-650/10"
                 >
                   Simpan
                 </button>

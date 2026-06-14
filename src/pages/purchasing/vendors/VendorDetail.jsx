@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { vendorService } from '../../../services/vendorService';
-import { getDB } from '../../../data/db';
 import { ChevronLeft, Edit2, Store, Phone, Mail, MapPin, FileText, Calendar } from 'lucide-react';
 import { formatRupiah, formatDate } from '../../../utils/format';
 import StatusBadge from '../../../components/badges/StatusBadge';
@@ -50,8 +49,7 @@ export default function VendorDetail() {
     );
   }
 
-  const db = getDB();
-  const getBranchName = (branchId) => db.branches.find(b => b.id === branchId)?.name || '-';
+
 
   return (
     <div className="space-y-6">
@@ -148,7 +146,7 @@ export default function VendorDetail() {
                             <span>{formatDate(po.createdAt)}</span>
                           </div>
                         </td>
-                        <td className="py-3">{getBranchName(po.branchId)}</td>
+                        <td className="py-3">{po.branchName}</td>
                         <td className="py-3"><StatusBadge status={po.status} /></td>
                         <td className="py-3 text-right font-semibold text-slate-800">{formatRupiah(po.totalAmount)}</td>
                       </tr>

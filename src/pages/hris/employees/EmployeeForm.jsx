@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { employeeService } from '../../../services/employeeService';
 import { branchService } from '../../../services/branchService';
 import { positionService } from '../../../services/positionService';
-import { getDB } from '../../../data/db';
+import { apiClient } from '../../../lib/apiClient';
 import { ChevronLeft, Save, Loader, AlertCircle } from 'lucide-react';
 
 export default function EmployeeForm() {
@@ -12,23 +12,21 @@ export default function EmployeeForm() {
   const isEditMode = !!id;
 
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    branchId: '',
-    divisionId: '',
-    positionId: '',
-    level: 'Staff',
-    status: 'Active',
-    contractStart: '',
-    contractEnd: '',
-    supervisorId: ''
+    user_id: '',
+    nama_lengkap: '',
+    nomor_induk_karyawan: '',
+    alamat: '',
+    branch_id: '',
+    position_id: '',
+    tanggal_gabung: '',
+    tanggal_mulai_kontrak: '',
+    tanggal_akhir_kontrak: '',
+    status: 'aktif'
   });
 
   const [branches, setBranches] = useState([]);
   const [positions, setPositions] = useState([]);
-  const [divisions, setDivisions] = useState([]);
-  const [supervisors, setSupervisors] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -38,33 +36,30 @@ export default function EmployeeForm() {
       try {
         setLoading(true);
         setError('');
-        
-        const db = getDB();
-        setBranches(db.branches || []);
-        setPositions(db.positions || []);
-        setDivisions(db.divisions || []);
-        
-        // Load eligible supervisors (exclude self if in edit mode)
-        const allEmps = db.employees || [];
-        const filteredSups = isEditMode 
-          ? allEmps.filter(emp => emp.id !== parseInt(id)) 
-          : allEmps;
-        setSupervisors(filteredSups);
+
+        const [branchList, positionList, usersRes] = await Promise.all([
+          branchService.getAll(),
+          positionService.getAll(),
+          apiClient.get('/api/auth/users')
+        ]);
+
+        setBranches(branchList);
+        setPositions(positionList);
+        setUsers(Array.isArray(usersRes) ? usersRes : (usersRes.data || []));
 
         if (isEditMode) {
           const currentEmp = await employeeService.getById(id);
           setFormData({
-            name: currentEmp.name || '',
-            email: currentEmp.email || '',
-            phone: currentEmp.phone || '',
-            branchId: currentEmp.branchId || '',
-            divisionId: currentEmp.divisionId || '',
-            positionId: currentEmp.positionId || '',
-            level: currentEmp.level || 'Staff',
-            status: currentEmp.status || 'Active',
-            contractStart: currentEmp.contractStart || '',
-            contractEnd: currentEmp.contractEnd || '',
-            supervisorId: currentEmp.supervisorId || ''
+            user_id: currentEmp.user_id || '',
+            nama_lengkap: currentEmp.nama_lengkap || '',
+            nomor_induk_karyawan: currentEmp.nomor_induk_karyawan || '',
+            alamat: currentEmp.alamat || '',
+            branch_id: currentEmp.branch_id || '',
+            position_id: currentEmp.position_id || '',
+            tanggal_gabung: currentEmp.tanggal_gabung || '',
+            tanggal_mulai_kontrak: currentEmp.tanggal_mulai_kontrak || '',
+            tanggal_akhir_kontrak: currentEmp.tanggal_akhir_kontrak || '',
+            status: currentEmp.status || 'aktif'
           });
         }
       } catch (err) {
@@ -87,18 +82,18 @@ export default function EmployeeForm() {
     setError('');
 
     // Input Validations
-    if (!formData.name.trim()) return setError('Nama lengkap karyawan wajib diisi.');
-    if (!formData.email.trim()) return setError('Email korporat wajib diisi.');
-    if (!formData.phone.trim()) return setError('Nomor telepon/HP wajib diisi.');
-    if (!formData.branchId) return setError('Cabang penempatan wajib dipilih.');
-    if (!formData.divisionId) return setError('Divisi kerja wajib dipilih.');
-    if (!formData.positionId) return setError('Jabatan struktural wajib dipilih.');
-    if (!formData.contractStart) return setError('Tanggal awal kontrak wajib diisi.');
-    if (!formData.contractEnd) return setError('Tanggal akhir kontrak wajib diisi.');
-    
+    if (!formData.user_id) return setError('Akun pengguna wajib dipilih.');
+    if (!formData.nama_lengkap.trim()) return setError('Nama lengkap karyawan wajib diisi.');
+    if (!formData.nomor_induk_karyawan.trim()) return setError('Nomor induk karyawan wajib diisi.');
+    if (!formData.alamat.trim()) return setError('Alamat karyawan wajib diisi.');
+    if (!formData.branch_id) return setError('Cabang penempatan wajib dipilih.');
+    if (!formData.position_id) return setError('Jabatan struktural wajib dipilih.');
+    if (!formData.tanggal_gabung) return setError('Tanggal gabung wajib diisi.');
+    if (!formData.tanggal_mulai_kontrak) return setError('Tanggal mulai kontrak wajib diisi.');
+
     // Check contract dates logical order
-    if (new Date(formData.contractStart) > new Date(formData.contractEnd)) {
-      return setError('Tanggal awal kontrak tidak boleh melebihi tanggal akhir kontrak.');
+    if (formData.tanggal_akhir_kontrak && new Date(formData.tanggal_mulai_kontrak) > new Date(formData.tanggal_akhir_kontrak)) {
+      return setError('Tanggal mulai kontrak tidak boleh melebihi tanggal akhir kontrak.');
     }
 
     setSubmitting(true);
@@ -124,7 +119,11 @@ export default function EmployeeForm() {
     );
   }
 
-  const levelOptions = ['Director', 'Manager', 'Supervisor', 'Staff'];
+  const statusOptions = [
+    { value: 'aktif', label: 'Aktif' },
+    { value: 'nonaktif', label: 'Non-Aktif' },
+    { value: 'kontrak_berakhir', label: 'Kontrak Berakhir' }
+  ];
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -132,7 +131,7 @@ export default function EmployeeForm() {
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate(isEditMode ? `/hris/employees/${id}` : '/hris/employees')}
-          className="inline-flex items-center space-x-2 text-xs font-semibold text-slate-650 hover:text-indigo-650"
+          className="inline-flex items-center space-x-2 text-xs font-semibold text-slate-655 hover:text-indigo-650"
         >
           <ChevronLeft size={16} />
           <span>Batal</span>
@@ -153,42 +152,59 @@ export default function EmployeeForm() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* User Account Selection */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-2">Akun Pengguna (User Account)</label>
+              <select
+                name="user_id"
+                value={formData.user_id}
+                onChange={handleChange}
+                disabled={isEditMode}
+                className="block w-full rounded-xl border border-slate-200 px-3 py-2.5 text-xs text-slate-700 focus:border-indigo-500 focus:ring-indigo-500 bg-white disabled:bg-slate-50 disabled:text-slate-400"
+              >
+                <option value="">Pilih Akun User</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Nomor Induk Karyawan (NIK) */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-2">Nomor Induk Karyawan (NIK)</label>
+              <input
+                type="text"
+                name="nomor_induk_karyawan"
+                value={formData.nomor_induk_karyawan}
+                onChange={handleChange}
+                placeholder="cth: 2026.01.00001"
+                className="block w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-850 focus:border-indigo-500 transition-all-fast"
+              />
+            </div>
+
             {/* Full Name */}
             <div className="col-span-2">
               <label className="block text-xs font-semibold text-slate-600 mb-2">Nama Lengkap</label>
               <input
                 type="text"
-                name="name"
-                value={formData.name}
+                name="nama_lengkap"
+                value={formData.nama_lengkap}
                 onChange={handleChange}
                 placeholder="cth: Teguh Afriyando"
-                className="block w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-850 focus:border-indigo-500 transition-all-fast"
+                className="block w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-855 focus:border-indigo-500 transition-all-fast"
               />
             </div>
 
-            {/* Corporate Email */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-2">Email Korporat</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="cth: nama@anyar.co.id"
-                className="block w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-850 focus:border-indigo-500 transition-all-fast"
-              />
-            </div>
-
-            {/* Phone Number */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-2">Nomor Telepon / HP</label>
+            {/* Alamat / Tempat Tinggal */}
+            <div className="col-span-2">
+              <label className="block text-xs font-semibold text-slate-600 mb-2">Alamat Karyawan</label>
               <input
                 type="text"
-                name="phone"
-                value={formData.phone}
+                name="alamat"
+                value={formData.alamat}
                 onChange={handleChange}
-                placeholder="cth: +62812345678"
-                className="block w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-850 focus:border-indigo-500 transition-all-fast"
+                placeholder="cth: Jl. Cihampelas No. 12, Bandung"
+                className="block w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-855 focus:border-indigo-500 transition-all-fast"
               />
             </div>
 
@@ -196,8 +212,8 @@ export default function EmployeeForm() {
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-2">Cabang Penempatan</label>
               <select
-                name="branchId"
-                value={formData.branchId}
+                name="branch_id"
+                value={formData.branch_id}
                 onChange={handleChange}
                 className="block w-full rounded-xl border border-slate-200 px-3 py-2.5 text-xs text-slate-700 focus:border-indigo-500"
               >
@@ -208,28 +224,12 @@ export default function EmployeeForm() {
               </select>
             </div>
 
-            {/* Division Selection */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-2">Divisi</label>
-              <select
-                name="divisionId"
-                value={formData.divisionId}
-                onChange={handleChange}
-                className="block w-full rounded-xl border border-slate-200 px-3 py-2.5 text-xs text-slate-700 focus:border-indigo-500"
-              >
-                <option value="">Pilih Divisi</option>
-                {divisions.map(d => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
-            </div>
-
             {/* Position Selection */}
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-2">Jabatan Struktural</label>
               <select
-                name="positionId"
-                value={formData.positionId}
+                name="position_id"
+                value={formData.position_id}
                 onChange={handleChange}
                 className="block w-full rounded-xl border border-slate-200 px-3 py-2.5 text-xs text-slate-700 focus:border-indigo-500"
               >
@@ -240,69 +240,52 @@ export default function EmployeeForm() {
               </select>
             </div>
 
-            {/* Position Level */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-2">Level Jabatan</label>
-              <select
-                name="level"
-                value={formData.level}
-                onChange={handleChange}
-                className="block w-full rounded-xl border border-slate-200 px-3 py-2.5 text-xs text-slate-700 focus:border-indigo-500"
-              >
-                {levelOptions.map(lvl => (
-                  <option key={lvl} value={lvl}>{lvl}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Supervisor (Line Manager) */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-2">Atasan Langsung (Supervisor)</label>
-              <select
-                name="supervisorId"
-                value={formData.supervisorId}
-                onChange={handleChange}
-                className="block w-full rounded-xl border border-slate-200 px-3 py-2.5 text-xs text-slate-700 focus:border-indigo-500"
-              >
-                <option value="">Tidak Ada Atasan (CEO / Top Level)</option>
-                {supervisors.map(sup => (
-                  <option key={sup.id} value={sup.id}>{sup.name} - {sup.jobTitle}</option>
-                ))}
-              </select>
-            </div>
-
             {/* Account Status */}
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-2">Status Aktif</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-2">Status Karyawan</label>
               <select
                 name="status"
                 value={formData.status}
                 onChange={handleChange}
                 className="block w-full rounded-xl border border-slate-200 px-3 py-2.5 text-xs text-slate-700 focus:border-indigo-500"
               >
-                <option value="Active">Aktif</option>
-                <option value="Inactive">Non-Aktif</option>
+                {statusOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
               </select>
             </div>
 
-            {/* Contract Dates */}
+            {/* Tanggal Gabung */}
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-2">Mulai Kontrak Kerja</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-2">Tanggal Gabung</label>
               <input
                 type="date"
-                name="contractStart"
-                value={formData.contractStart}
+                name="tanggal_gabung"
+                value={formData.tanggal_gabung}
                 onChange={handleChange}
                 className="block w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-850 focus:border-indigo-500"
               />
             </div>
 
+            {/* Tanggal Mulai Kontrak */}
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-2">Selesai Kontrak Kerja</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-2">Mulai Kontrak Kerja</label>
               <input
                 type="date"
-                name="contractEnd"
-                value={formData.contractEnd}
+                name="tanggal_mulai_kontrak"
+                value={formData.tanggal_mulai_kontrak}
+                onChange={handleChange}
+                className="block w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-850 focus:border-indigo-500"
+              />
+            </div>
+
+            {/* Tanggal Akhir Kontrak */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-2">Selesai Kontrak Kerja (Opsional)</label>
+              <input
+                type="date"
+                name="tanggal_akhir_kontrak"
+                value={formData.tanggal_akhir_kontrak || ''}
                 onChange={handleChange}
                 className="block w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-850 focus:border-indigo-500"
               />
@@ -315,14 +298,14 @@ export default function EmployeeForm() {
               type="button"
               onClick={() => navigate(isEditMode ? `/hris/employees/${id}` : '/hris/employees')}
               disabled={submitting}
-              className="rounded-xl border border-slate-200 px-5 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              className="rounded-xl border border-slate-200 px-5 py-2.5 text-xs font-semibold text-slate-605 hover:bg-slate-50 disabled:opacity-50"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex items-center justify-center space-x-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-indigo-600/15 hover:bg-indigo-500 disabled:opacity-50 transition-all duration-150"
+              className="inline-flex items-center justify-center space-x-2 rounded-xl bg-indigo-500 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-indigo-600/15 hover:bg-indigo-500 disabled:opacity-50 transition-all duration-150"
             >
               {submitting ? (
                 <>

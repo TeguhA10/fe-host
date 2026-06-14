@@ -10,9 +10,8 @@ export default function Login() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -40,12 +39,6 @@ export default function Login() {
     setLoading(true);
     try {
       await login(email, password);
-      // Remember me logic simulation
-      if (rememberMe) {
-        localStorage.setItem('remembered_email', email);
-      } else {
-        localStorage.removeItem('remembered_email');
-      }
       navigate(from, { replace: true });
     } catch (err) {
       setError(err.message || 'Login gagal. Hubungi administrator.');
@@ -54,20 +47,12 @@ export default function Login() {
     }
   };
 
-  // Pre-fill email if remembered
-  React.useEffect(() => {
-    const savedEmail = localStorage.getItem('remembered_email');
-    if (savedEmail) {
-      setEmail(savedEmail);
-      setRememberMe(true);
-    }
-  }, []);
 
   return (
     <div className="w-full">
       {/* Login Card Panel */}
       <div className="glass-panel rounded-2xl shadow-2xl p-8 border border-white/20">
-        
+
         {/* Company Header */}
         <div className="text-center mb-8">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 font-bold text-white shadow-xl shadow-indigo-600/30 text-xl tracking-wider">
@@ -144,19 +129,6 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Remember me option */}
-          <div className="flex items-center justify-between text-xs">
-            <label className="flex items-center space-x-2 text-slate-600 font-medium cursor-pointer">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                disabled={loading}
-                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer h-4 w-4"
-              />
-              <span>Ingat saya</span>
-            </label>
-          </div>
 
           {/* Login Action Button */}
           <button
@@ -178,26 +150,32 @@ export default function Login() {
         {/* Credentials Sandbox Helper */}
         <div className="mt-6 border-t border-slate-200/60 pt-4">
           <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider text-center mb-2">
-            Informasi Kredensial Demo:
+            Informasi Kredensial Demo
           </p>
-          <div className="grid grid-cols-2 gap-2 text-[10px] bg-slate-50 border border-slate-100 rounded-xl p-3 text-slate-600">
+
+          <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-[10px] text-slate-600 space-y-2">
             <div>
-              <p className="font-semibold text-slate-800">Email:</p>
-              <p className="font-mono">admin@example.com</p>
+              <p className="font-semibold text-slate-800">Super Admin</p>
+              <p className="font-mono">Email: admin@example.com</p>
+              <p className="font-mono">Password: password123</p>
             </div>
-            <div>
-              <p className="font-semibold text-slate-800">Role:</p>
-              <p>Super Admin</p>
+
+            <div className="border-t border-slate-200 pt-2">
+              <p className="font-semibold text-slate-800">
+                Password Akun Lainnya
+              </p>
+              <p className="font-mono">password123!</p>
             </div>
-            <div className="col-span-2 border-t border-slate-200/50 mt-1 pt-1">
-              <p className="font-semibold text-slate-800">Password:</p>
-              <p className="font-mono">password123 (Sama untuk semua akun)</p>
-            </div>
-            <div className="col-span-2 border-t border-slate-200/50 pt-1 text-slate-500">
-              Alternatif login:
-              <br />• <span className="font-mono">purchasing@example.com</span> (Purchasing Admin)
-              <br />• <span className="font-mono">cabang.jkt@example.com</span> (Branch Admin)
-              <br />• <span className="font-mono">staff.jkt@example.com</span> (Purchasing Staff)
+
+            <div className="border-t border-slate-200 pt-2">
+              <p className="font-semibold text-slate-800">Daftar Akun Lain:</p>
+              <div className="font-mono space-y-1 mt-1">
+                <p>• hrd@example.com → Admin HRD</p>
+                <p>• purchasing@anyar.co.id → Admin Purchasing</p>
+                <p>• branch@anyar.co.id → Admin Cabang</p>
+                <p>• rizky.firmansyah@anyar.co.id → Staff Purchasing</p>
+                <p>• siti.nurhaliza@anyar.co.id → Karyawan</p>
+              </div>
             </div>
           </div>
         </div>

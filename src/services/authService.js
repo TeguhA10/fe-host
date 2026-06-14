@@ -1,59 +1,39 @@
-import { getDB } from '../data/db';
+import { apiClient } from '../lib/apiClient';
+
+const mapUser = (apiUser) => {
+  if (!apiUser) return null;
+  return {
+    id: apiUser.id,
+    name: apiUser.name,
+    email: apiUser.email,
+    roleId: apiUser.role,
+    branchId: apiUser.branch_id,
+    active: apiUser.is_active
+  };
+};
 
 export const authService = {
   login: async (email, password) => {
-    // Simulate API request delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    const db = getDB();
-    const user = db.users.find(u => u.email === email && u.password === password);
-
-    if (!user) {
-      throw new Error('Email atau Password salah.');
-    }
-
-    if (!user.active) {
-      throw new Error('Akun Anda dinonaktifkan. Silakan hubungi Superadmin.');
-    }
-
-    const dummyToken = `jwt-token-${user.id}-${Math.random().toString(36).substring(2)}`;
-    localStorage.setItem('token', dummyToken);
-    
-    const userSession = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      roleId: user.roleId,
-      branchId: user.branchId
-    };
-    localStorage.setItem('user', JSON.stringify(userSession));
-
-    return { token: dummyToken, user: userSession };
+    await apiClient.post('/api/auth/login', { email, password });
+    const profile = await authService.getProfile();
+    return { user: profile, token: 'session-active' };
   },
 
   logout: async () => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    try {
+      await apiClient.post('/api/auth/logout');
+    } catch (err) {
+      console.error('Logout error on backend:', err);
+    }
     return true;
   },
 
-  getCurrentUser: () => {
-    const user = localStorage.getItem('user');
-    return user ? JSON.parse(user) : null;
+  refresh: async () => {
+    return apiClient.post('/api/auth/refresh');
   },
 
   getProfile: async () => {
-    const user = authService.getCurrentUser();
-    if (!user) throw new Error('Unauthorized');
-    return user;
-  },
-
-  getToken: () => {
-    return localStorage.getItem('token');
-  },
-
-  isAuthenticated: () => {
-    return !!localStorage.getItem('token');
+    const res = await apiClient.get('/api/auth/me');
+    return mapUser(res.data);
   }
 };

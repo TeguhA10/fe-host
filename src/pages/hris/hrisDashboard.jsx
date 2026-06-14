@@ -1,8 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getDB } from '../../data/db';
+import { employeeService } from '../../services/employeeService';
+import { branchService } from '../../services/branchService';
 import { Users, Store, GitMerge, FileWarning, Calendar, UserCheck } from 'lucide-react';
 import { formatDate } from '../../utils/format';
+
+const DIVISIONS = [
+  'Executive Suite',
+  'Human Resources',
+  'Purchasing & Logistics',
+  'Information Technology',
+  'Finance & Accounting'
+];
 
 export default function HrisDashboard() {
   const [stats, setStats] = useState({
@@ -12,62 +21,65 @@ export default function HrisDashboard() {
     divisionBreakdown: [],
     expiringContracts: []
   });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const db = getDB();
-    
-    // 1. Active Employees Count
-    const active = db.employees.filter(e => e.status === 'Active');
-    
-    // 2. Total Branches
-    const branchCount = db.branches.length;
-    
-    // 3. Total Divisions
-    const divisionCount = db.divisions.length;
-    
-    // 4. Breakdown by Division
-    const breakdown = db.divisions.map(div => {
-      const count = db.employees.filter(e => e.divisionId === div.id && e.status === 'Active').length;
-      return {
-        id: div.id,
-        name: div.name,
-        count
-      };
-    }).sort((a, b) => b.count - a.count);
+    const loadDashboard = async () => {
+      try {
+        setLoading(true);
+        const [empRes, branchList] = await Promise.all([
+          employeeService.getAll({ limit: 1000 }), // Load full list for aggregates
+          branchService.getAll()
+        ]);
 
-    // 5. Contracts ending in 30 days
-    // Assume current date is June 12, 2026
-    const today = new Date('2026-06-12');
-    const thirtyDaysLater = new Date(today);
-    thirtyDaysLater.setDate(today.getDate() + 30);
+        const empList = empRes.data || empRes || [];
+        const active = empList.filter(e => e.status === 'aktif');
+        const branchCount = branchList.length;
+        const divisionCount = DIVISIONS.length;
+        
+        const breakdown = DIVISIONS.map((divName, idx) => {
+          const count = active.filter(e => e.division.toLowerCase() === divName.toLowerCase()).length;
+          return {
+            id: idx + 1,
+            name: divName,
+            count
+          };
+        }).sort((a, b) => b.count - a.count);
 
-    const expiring = db.employees.filter(emp => {
-      if (!emp.contractEnd || emp.status !== 'Active') return false;
-      const end = new Date(emp.contractEnd);
-      return end >= today && end <= thirtyDaysLater;
-    }).map(emp => {
-      const end = new Date(emp.contractEnd);
-      const diffTime = Math.abs(end - today);
-      const diffDays = Math.ceil(diffTime / (1000 * 65 * 60 * 24)); // Days calculation
-      
-      const branch = db.branches.find(b => b.id === emp.branchId);
-      const position = db.positions.find(p => p.id === emp.positionId);
-      
-      return {
-        ...emp,
-        daysLeft: diffDays,
-        branchName: branch ? branch.name : 'Unknown',
-        positionName: position ? position.name : 'Unknown'
-      };
-    }).sort((a, b) => a.daysLeft - b.daysLeft);
+        // Expiring contracts within 30 days
+        const today = new Date('2026-06-12');
+        const thirtyDaysLater = new Date(today);
+        thirtyDaysLater.setDate(today.getDate() + 30);
 
-    setStats({
-      activeEmployees: active.length,
-      totalBranches: branchCount,
-      totalDivisions: divisionCount,
-      divisionBreakdown: breakdown,
-      expiringContracts: expiring
-    });
+        const expiring = active.filter(emp => {
+          if (!emp.contractEnd) return false;
+          const end = new Date(emp.contractEnd);
+          return end >= today && end <= thirtyDaysLater;
+        }).map(emp => {
+          const end = new Date(emp.contractEnd);
+          const diffTime = Math.abs(end - today);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Correct days calculation
+          
+          return {
+            ...emp,
+            daysLeft: diffDays
+          };
+        }).sort((a, b) => a.daysLeft - b.daysLeft);
+
+        setStats({
+          activeEmployees: active.length,
+          totalBranches: branchCount,
+          totalDivisions: divisionCount,
+          divisionBreakdown: breakdown,
+          expiringContracts: expiring
+        });
+      } catch (err) {
+        console.error('Failed to load HRIS dashboard stats:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadDashboard();
   }, []);
 
   const totalActiveEmps = stats.activeEmployees;
@@ -85,7 +97,7 @@ export default function HrisDashboard() {
         <div className="bg-white p-6 rounded-2xl border border-slate-200/85 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Karyawan Aktif</p>
-            <p className="text-3xl font-extrabold text-slate-800 mt-1">{stats.activeEmployees}</p>
+            <p className="text-3xl font-extrabold text-slate-800 mt-1">{loading ? '...' : stats.activeEmployees}</p>
           </div>
           <div className="p-4 bg-indigo-50 text-indigo-600 rounded-2xl">
             <Users size={24} />
@@ -95,7 +107,7 @@ export default function HrisDashboard() {
         <div className="bg-white p-6 rounded-2xl border border-slate-200/85 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Jumlah Cabang</p>
-            <p className="text-3xl font-extrabold text-slate-800 mt-1">{stats.totalBranches}</p>
+            <p className="text-3xl font-extrabold text-slate-800 mt-1">{loading ? '...' : stats.totalBranches}</p>
           </div>
           <div className="p-4 bg-emerald-50 text-emerald-600 rounded-2xl">
             <Store size={24} />
@@ -105,7 +117,7 @@ export default function HrisDashboard() {
         <div className="bg-white p-6 rounded-2xl border border-slate-200/85 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Jumlah Divisi</p>
-            <p className="text-3xl font-extrabold text-slate-800 mt-1">{stats.totalDivisions}</p>
+            <p className="text-3xl font-extrabold text-slate-800 mt-1">{loading ? '...' : stats.totalDivisions}</p>
           </div>
           <div className="p-4 bg-purple-50 text-purple-600 rounded-2xl">
             <GitMerge size={24} />
@@ -124,7 +136,9 @@ export default function HrisDashboard() {
           </h2>
           
           <div className="space-y-4">
-            {stats.divisionBreakdown.map((div) => {
+            {loading ? (
+              <div className="text-xs text-slate-400">Memuat breakdown divisi...</div>
+            ) : stats.divisionBreakdown.map((div) => {
               const percentage = totalActiveEmps > 0 ? (div.count / totalActiveEmps) * 100 : 0;
               return (
                 <div key={div.id} className="space-y-2">
@@ -151,7 +165,9 @@ export default function HrisDashboard() {
             <span>Kontrak Berakhir (30 Hari)</span>
           </h2>
 
-          {stats.expiringContracts.length === 0 ? (
+          {loading ? (
+            <div className="text-xs text-slate-400">Memuat info kontrak...</div>
+          ) : stats.expiringContracts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-slate-400">
               <Calendar size={36} className="text-slate-300 mb-2" />
               <p className="text-xs font-medium">Tidak ada kontrak yang berakhir dalam 30 hari ke depan.</p>

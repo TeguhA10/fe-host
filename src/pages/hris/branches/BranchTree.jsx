@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { branchService } from '../../../services/branchService';
 import { Plus, Edit2, Trash2, Folder, FolderOpen, ArrowRight, Loader, AlertCircle } from 'lucide-react';
-import { getDB } from '../../../data/db';
+import { employeeService } from '../../../services/employeeService';
 
 export default function BranchTree() {
   const [treeData, setTreeData] = useState([]);
   const [flatBranches, setFlatBranches] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -21,8 +22,10 @@ export default function BranchTree() {
       setError('');
       const tree = await branchService.getTree();
       const flat = await branchService.getAll();
+      const emps = await employeeService.getAll();
       setTreeData(tree);
       setFlatBranches(flat);
+      setEmployees(emps);
     } catch (err) {
       setError(err.message || 'Gagal memuat struktur organisasi cabang.');
     } finally {
@@ -79,9 +82,8 @@ export default function BranchTree() {
   };
 
   // Count employees in branch for indicators
-  const db = getDB();
   const getEmployeeCount = (branchId) => {
-    return db.employees.filter(emp => emp.branchId === branchId && emp.status === 'Active').length;
+    return employees.filter(emp => emp.branchId === branchId && emp.status === 'aktif').length;
   };
 
   // Recursive Branch Node Component
@@ -95,7 +97,7 @@ export default function BranchTree() {
         {/* Branch row layout card */}
         <div className="flex items-center justify-between p-3.5 bg-white border border-slate-200/70 rounded-xl shadow-sm hover:shadow-md transition-all duration-200">
           <div className="flex items-center space-x-3">
-            <button 
+            <button
               onClick={() => setCollapsed(!collapsed)}
               className="text-slate-400 hover:text-indigo-600 transition-colors p-1"
             >
@@ -206,7 +208,7 @@ export default function BranchTree() {
             <h3 className="text-sm font-bold text-slate-800 mb-4">
               {modalMode === 'create' ? 'Tambah Cabang' : 'Ubah Cabang'}
             </h3>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-[10px] font-bold text-slate-450 uppercase mb-2">Nama Cabang</label>
@@ -267,7 +269,7 @@ export default function BranchTree() {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-indigo-650 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 shadow-lg shadow-indigo-650/10"
+                  className="rounded-lg bg-indigo-500 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 shadow-lg shadow-indigo-650/10"
                 >
                   Simpan
                 </button>
