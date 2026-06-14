@@ -14,6 +14,7 @@ const mapEmployee = (emp) => {
     user_id: emp.user_id,
     name: emp.nama_lengkap,
     nama_lengkap: emp.nama_lengkap,
+    nomor_induk_karyawan: emp.nomor_induk_karyawan,
     email: emp.user?.email || emp.email || '',
     phone: emp.alamat || '',
     alamat: emp.alamat || '',

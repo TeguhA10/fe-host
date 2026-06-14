@@ -164,7 +164,7 @@ export default function Login() {
               <p className="font-semibold text-slate-800">
                 Password Akun Lainnya
               </p>
-              <p className="font-mono">password123!</p>
+              <p className="font-mono">password123</p>
             </div>
 
             <div className="border-t border-slate-200 pt-2">
