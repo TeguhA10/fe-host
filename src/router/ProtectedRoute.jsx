@@ -23,8 +23,8 @@ export const ProtectedRoute = ({ children, allowedRoles }) => {
   }
 
   if (allowedRoles && !allowedRoles.includes(user.roleId)) {
-    // If user's role is not authorized, redirect to main dashboard
-    return <Navigate to="/dashboard" replace />;
+    // If user's role is not authorized, redirect to forbidden page
+    return <Navigate to="/403" replace />;
   }
 
   return children;

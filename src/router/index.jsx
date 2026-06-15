@@ -1,5 +1,5 @@
 import React from 'react';
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 
 // Layouts
 import AuthLayout from '../layouts/AuthLayout';
@@ -59,6 +59,11 @@ export const router = createBrowserRouter([
       // HRIS Submodule
       {
         path: 'hris',
+        element: (
+          <ProtectedRoute allowedRoles={['superadmin', 'admin_hrd']}>
+            <Outlet />
+          </ProtectedRoute>
+        ),
         children: [
           { index: true, element: <HrisDashboard /> },
           { path: 'employees', element: <EmployeeList /> },
@@ -82,14 +87,41 @@ export const router = createBrowserRouter([
       {
         path: 'purchasing',
         children: [
-          { index: true, element: <PurchasingDashboard /> },
-          { path: 'vendors', element: <VendorList /> },
-          { path: 'vendors/new', element: <VendorForm /> },
-          { path: 'vendors/:id', element: <VendorDetail /> },
-          { path: 'vendors/:id/edit', element: <VendorForm /> },
-          { path: 'items', element: <ItemList /> },
-          { path: 'items/new', element: <ItemForm /> },
-          { path: 'items/:id/edit', element: <ItemForm /> },
+          {
+            index: true,
+            element: (
+              <ProtectedRoute allowedRoles={['superadmin', 'admin_purchasing']}>
+                <PurchasingDashboard />
+              </ProtectedRoute>
+            )
+          },
+          {
+            path: 'vendors',
+            element: (
+              <ProtectedRoute allowedRoles={['superadmin', 'admin_purchasing']}>
+                <Outlet />
+              </ProtectedRoute>
+            ),
+            children: [
+              { index: true, element: <VendorList /> },
+              { path: 'new', element: <VendorForm /> },
+              { path: ':id', element: <VendorDetail /> },
+              { path: ':id/edit', element: <VendorForm /> }
+            ]
+          },
+          {
+            path: 'items',
+            element: (
+              <ProtectedRoute allowedRoles={['superadmin', 'admin_purchasing']}>
+                <Outlet />
+              </ProtectedRoute>
+            ),
+            children: [
+              { index: true, element: <ItemList /> },
+              { path: 'new', element: <ItemForm /> },
+              { path: ':id/edit', element: <ItemForm /> }
+            ]
+          },
           { path: 'purchase-orders', element: <PurchaseOrderList /> },
           { path: 'purchase-orders/new', element: <PurchaseOrderForm /> },
           { path: 'purchase-orders/:id', element: <PurchaseOrderDetail /> },
